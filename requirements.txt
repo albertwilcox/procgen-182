@@ -1,0 +1,10 @@
+gym
+atari-py
+numpy
+tensorflow
+seaborn
+matplotlib
+opencv-python
+jupyter
+procgen
+
