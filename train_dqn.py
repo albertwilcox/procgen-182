@@ -6,6 +6,7 @@ import tensorflow as tf
 import tensorflow.keras.layers as layers
 import dqn
 from dqn_utils import *
+from schedulers import *
 
 
 def fruitbot_model(num_actions) -> tf.keras.Model:
@@ -79,7 +80,6 @@ def learn(env, args):
         env=env,
         q_model=q_model,
         optimizer_spec=optimizer,
-        session=session,
         exploration=exploration_schedule,
         replay_buffer_size=1000000,
         batch_size=32,
@@ -111,6 +111,8 @@ def get_env(args):
     env = gym.make('procgen:procgen-fruitbot-v0', distribution_mode='easy')
     set_global_seeds(args.seed)
     env.seed(args.seed)
+    expt_dir = os.path.join(args.logdir, "gym")
+    env = wrappers.Monitor(env, expt_dir, force=True)
     # if args.env == 'CartPole-v0':
     #     env = gym.make(args.env)
     #     set_global_seeds(args.seed)
