@@ -179,6 +179,8 @@ class PiecewiseSchedule(object):
 
 class ReplayBuffer(object):
 
+    # TODO: adapt this
+
     def __init__(self, size, frame_history_len, cartpole=False):
         """This is a memory efficient implementation of the replay buffer.
 

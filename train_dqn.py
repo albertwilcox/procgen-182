@@ -3,112 +3,96 @@ import logz
 from gym import wrappers
 import numpy as np
 import tensorflow as tf
-import tensorflow.contrib.layers as layers
+import tensorflow.keras.layers as layers
 import dqn
 from dqn_utils import *
-from atari_wrappers import *
 
 
-def atari_model(img_in, num_actions, scope, reuse=False):
-    with tf.variable_scope(scope, reuse=reuse):
-        out = img_in
-        with tf.variable_scope("convnet"):
-            out = layers.convolution2d(out, num_outputs=32,
-                    kernel_size=8, stride=4, activation_fn=tf.nn.relu)
-            out = layers.convolution2d(out, num_outputs=64,
-                    kernel_size=4, stride=2, activation_fn=tf.nn.relu)
-            out = layers.convolution2d(out, num_outputs=64,
-                    kernel_size=3, stride=1, activation_fn=tf.nn.relu)
-        out = layers.flatten(out)
-        with tf.variable_scope("action_value"):
-            out = layers.fully_connected(out, num_outputs=512,
-                    activation_fn=tf.nn.relu)
-            out = layers.fully_connected(out, num_outputs=num_actions,
-                    activation_fn=None)
-        return out
-
-
-def cartpole_model(x_input, num_actions, scope, reuse=False):
-    """For CartPole we'll use a smaller network.
+def fruitbot_model(num_actions) -> tf.keras.Model:
     """
-    with tf.variable_scope(scope, reuse=reuse):
-        out = x_input
-        out = layers.fully_connected(out, num_outputs=32,
-                activation_fn=tf.nn.tanh)
-        out = layers.fully_connected(out, num_outputs=32,
-                activation_fn=tf.nn.tanh)
-        out = layers.fully_connected(out, num_outputs=num_actions,
-                activation_fn=None)
-        return out
+    Returns a keras model for Q learning
+    """
+    conv1 = tf.keras.layers.Conv2D(32, 8, 4, activation='relu')
+    conv2 = tf.keras.layers.Conv2D(64, 4, 2, activation='relu')
+    conv3 = tf.keras.layers.Conv2D(64, 3, 1, activation='relu')
+
+    fc1 = tf.keras.layers.Dense(512)
+    fc2 = tf.keras.layers.Dense(num_actions)
+
+    return tf.keras.Sequential([conv1, conv2, conv3, fc1, fc2])
 
 
-def learn(env, session, args):
-    if args.env == 'PongNoFrameskip-v4':
-        lr_schedule = ConstantSchedule(1e-4)
-        optimizer = dqn.OptimizerSpec(
-            constructor=tf.train.AdamOptimizer,
-            kwargs=dict(epsilon=1e-4),
-            lr_schedule=lr_schedule
-        )
-        limit = max(int(args.num_steps/2), 2e6)
-        exploration_schedule = PiecewiseSchedule([
-                (0,     1.00),
-                (1e6,   0.10),
-                (limit, 0.01),
-            ], outside_value=0.01
-        )
-        dqn.learn(
-            env=env,
-            q_func=atari_model,
-            optimizer_spec=optimizer,
-            session=session,
-            exploration=exploration_schedule,
-            replay_buffer_size=1000000,
-            batch_size=32,
-            gamma=0.99,
-            learning_starts=50000,
-            learning_freq=4,
-            frame_history_len=4,
-            target_update_freq=10000,
-            grad_norm_clipping=10,
-            double_q=args.double_q,
-            logdir=args.logdir,
-            max_steps=args.num_steps
-        )
-    elif args.env == 'CartPole-v0':
-        lr_schedule = ConstantSchedule(5e-4)
-        optimizer = dqn.OptimizerSpec(
-            constructor=tf.train.AdamOptimizer,
-            kwargs=dict(epsilon=1e-4),
-            lr_schedule=lr_schedule
-        )
-        exploration_schedule = PiecewiseSchedule([
-                (0,   1.00),
-                (5e4, 0.10),
-                (1e5, 0.02),
-            ], outside_value=0.02
-        )
-        dqn.learn(
-            env=env,
-            q_func=cartpole_model,
-            optimizer_spec=optimizer,
-            session=session,
-            exploration=exploration_schedule,
-            replay_buffer_size=10000,
-            batch_size=100,
-            gamma=0.99,
-            learning_starts=1000,
-            learning_freq=4,
-            frame_history_len=1,
-            target_update_freq=500,
-            grad_norm_clipping=10,
-            double_q=args.double_q,
-            logdir=args.logdir,
-            max_steps=args.num_steps,
-            cartpole=True
-        )
-    else:
-        raise ValueError(args.env)
+# def atari_model(img_in, num_actions, scope, reuse=False):
+#     with tf.variable_scope(scope, reuse=reuse):
+#         out = img_in
+#         with tf.variable_scope("convnet"):
+#             out = layers.convolution2d(out, num_outputs=32,
+#                     kernel_size=8, stride=4, activation_fn=tf.nn.relu)
+#             out = layers.convolution2d(out, num_outputs=64,
+#                     kernel_size=4, stride=2, activation_fn=tf.nn.relu)
+#             out = layers.convolution2d(out, num_outputs=64,
+#                     kernel_size=3, stride=1, activation_fn=tf.nn.relu)
+#         out = layers.flatten(out)
+#         with tf.variable_scope("action_value"):
+#             out = layers.fully_connected(out, num_outputs=512,
+#                     activation_fn=tf.nn.relu)
+#             out = layers.fully_connected(out, num_outputs=num_actions,
+#                     activation_fn=None)
+#         return out
+#
+#
+# def cartpole_model(x_input, num_actions, scope, reuse=False):
+#     """For CartPole we'll use a smaller network.
+#     """
+#     with tf.variable_scope(scope, reuse=reuse):
+#         out = x_input
+#         out = layers.fully_connected(out, num_outputs=32,
+#                 activation_fn=tf.nn.tanh)
+#         out = layers.fully_connected(out, num_outputs=32,
+#                 activation_fn=tf.nn.tanh)
+#         out = layers.fully_connected(out, num_outputs=num_actions,
+#                 activation_fn=None)
+#         return out
+
+
+def learn(env, args):
+    lr_schedule = ConstantSchedule(1e-4)
+
+    optimizer = dqn.OptimizerSpec(
+        constructor=tf.train.AdamOptimizer,
+        kwargs=dict(epsilon=1e-4),
+        lr_schedule=lr_schedule
+    )
+
+    limit = max(int(args.num_steps/2), 2e6)
+
+    exploration_schedule = PiecewiseSchedule([
+            (0,     1.00),
+            (1e6,   0.10),
+            (limit, 0.01),
+        ], outside_value=0.01
+    )
+
+    q_model = fruitbot_model(env.observation_space.shape)
+
+    dqn.learn(
+        env=env,
+        q_model=q_model,
+        optimizer_spec=optimizer,
+        session=session,
+        exploration=exploration_schedule,
+        replay_buffer_size=1000000,
+        batch_size=32,
+        gamma=0.99,
+        learning_starts=50000,
+        learning_freq=4,
+        frame_history_len=4,
+        target_update_freq=10000,
+        grad_norm_clipping=10,
+        double_q=args.double_q,
+        logdir=args.logdir,
+        max_steps=args.num_steps
+    )
     env.close()
 
 
@@ -123,49 +107,36 @@ def set_global_seeds(i):
     random.seed(i)
 
 
-def get_session():
-    def get_available_gpus():
-        from tensorflow.python.client import device_lib
-        local_device_protos = device_lib.list_local_devices()
-        return [x.physical_device_desc for x in local_device_protos \
-                if x.device_type == 'GPU']
-
-    tf.reset_default_graph()
-    tf_config = tf.ConfigProto(inter_op_parallelism_threads=1,
-                               intra_op_parallelism_threads=1)
-    tf_config.gpu_options.allow_growth = True
-    session = tf.Session(config=tf_config)
-    print("AVAILABLE GPUS: ", get_available_gpus())
-    return session
-
-
 def get_env(args):
-    if args.env == 'CartPole-v0':
-        env = gym.make(args.env)
-        set_global_seeds(args.seed)
-        env.seed(args.seed)
-        expt_dir = os.path.join(args.logdir, "gym")
-        env = wrappers.Monitor(env, expt_dir, force=True, video_callable=False)
-    else:
-        # Atari requires some environment wrapping; `print(env)` will show:
-        #
-        # <ClippedRewardsWrapper<ProcessFrame84<FireResetEnv ...
-        #     <MaxAndSkipEnv<NoopResetEnv<EpisodicLifeEnv<Monitor ...
-        #         <TimeLimit<AtariEnv<PongNoFrameskip-v4>>>>>>>>>>
-        #
-        # These are chained so that (for example) calling `step` on the outer
-        # most wrapper moves back up the hierarchy to the AtariEnv, which
-        # returns the output that moves in reverse and goes to the outer env.
-        #
-        # We also wrap around a Monitor, and information about episodes and
-        # videos can be found in `expt_dir`, which you may find useful. See:
-        # https://github.com/openai/gym/blob/master/gym/wrappers/monitor.py
-        env = gym.make(args.env)
-        set_global_seeds(args.seed)
-        env.seed(args.seed)
-        expt_dir = os.path.join(args.logdir, "gym")
-        env = wrappers.Monitor(env, expt_dir, force=True)
-        env = wrap_deepmind(env)
+    env = gym.make('procgen:procgen-fruitbot-v0', distribution_mode='easy')
+    set_global_seeds(args.seed)
+    env.seed(args.seed)
+    # if args.env == 'CartPole-v0':
+    #     env = gym.make(args.env)
+    #     set_global_seeds(args.seed)
+    #     env.seed(args.seed)
+    #     expt_dir = os.path.join(args.logdir, "gym")
+    #     env = wrappers.Monitor(env, expt_dir, force=True, video_callable=False)
+    # else:
+    #     # Atari requires some environment wrapping; `print(env)` will show:
+    #     #
+    #     # <ClippedRewardsWrapper<ProcessFrame84<FireResetEnv ...
+    #     #     <MaxAndSkipEnv<NoopResetEnv<EpisodicLifeEnv<Monitor ...
+    #     #         <TimeLimit<AtariEnv<PongNoFrameskip-v4>>>>>>>>>>
+    #     #
+    #     # These are chained so that (for example) calling `step` on the outer
+    #     # most wrapper moves back up the hierarchy to the AtariEnv, which
+    #     # returns the output that moves in reverse and goes to the outer env.
+    #     #
+    #     # We also wrap around a Monitor, and information about episodes and
+    #     # videos can be found in `expt_dir`, which you may find useful. See:
+    #     # https://github.com/openai/gym/blob/master/gym/wrappers/monitor.py
+    #     env = gym.make(args.env)
+    #     set_global_seeds(args.seed)
+    #     env.seed(args.seed)
+    #     expt_dir = os.path.join(args.logdir, "gym")
+    #     env = wrappers.Monitor(env, expt_dir, force=True)
+    #     env = wrap_deepmind(env)
     return env
 
 
@@ -193,5 +164,4 @@ if __name__ == "__main__":
     args.logdir = logdir
 
     env = get_env(args)
-    session = get_session()
-    learn(env, session, args)
+    learn(env, args)
