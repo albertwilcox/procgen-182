@@ -32,7 +32,9 @@ class QLearner(object):
                  double_q=True,
                  logdir=None,
                  max_steps=2e8,
-                 fruitbot=False):
+                 fruitbot=False,
+                 load_from=None,
+                 save_every=None):
         """Run Deep Q-learning algorithm.
 
         You can specify your own convnet using `q_func`.
@@ -91,6 +93,8 @@ class QLearner(object):
         self.gamma = gamma
         self.env = env
         self.fruitbot = fruitbot
+        self.save_freq = save_every
+        self.logdir = logdir
 
         if fruitbot:
             img_h, img_w, img_c = self.env.observation_space.shape
@@ -100,7 +104,10 @@ class QLearner(object):
 
         self.num_actions = self.env.action_space.n
 
-        self.q_model = q_model_constructor(input_shape, self.num_actions)
+        if load_from:
+            self.q_model = tf.keras.models.load_model(load_from)
+        else:
+            self.q_model = q_model_constructor(input_shape, self.num_actions)
         self.q_model_target = tf.keras.models.clone_model(self.q_model)
         self.q_model_target.set_weights(self.q_model.get_weights())
         print(self.q_model.summary())
@@ -187,7 +194,6 @@ class QLearner(object):
 
         self.last_obs = obs
 
-
     def update_model(self):
         """
         Perform experience replay and train the network.
@@ -200,21 +206,13 @@ class QLearner(object):
 
             obs_batch, act_batch, rew_batch, next_obs_batch, done_mask_batch = self.replay_buffer.sample(self.batch_size)
 
-            # print('here')
-
-            # with tf.GradientTape() as tape:
-            #     error = self.error(obs_batch.astype(np.float32),
-            #                        next_obs_batch.astype(np.float32),
-            #                        act_batch,
-            #                        rew_batch.astype(np.float32),
-            #                        done_mask_batch)
-            # grad = tape.gradient(error, self.q_model.trainable_variables)
-            # self.optimizer.apply_gradients(zip(grad, self.q_model.trainable_variables))
-            #
             self.optimizer_update(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
             
             if self.num_param_updates % self.target_update_freq == 0:
                 self.q_model_target.set_weights(self.q_model.get_weights())
+
+            if self.save_freq and self.num_param_updates % self.save_freq == 0:
+                self.q_model.save(os.path.join(self.logdir, 'model_%d.h5' % self.num_param_updates))
 
             self.num_param_updates += 1
 
@@ -248,7 +246,7 @@ class QLearner(object):
 
 def learn(*args, **kwargs):
     alg = QLearner(*args, **kwargs)
-    #QLearner.update_model = tf.function(QLearner.update_model)
+
     while True:
         alg.step_env()
         # The environment should have been advanced one step (and reset if done

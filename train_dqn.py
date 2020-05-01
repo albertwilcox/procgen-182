@@ -72,7 +72,9 @@ def learn(env, args):
             double_q=args.double_q,
             logdir=args.logdir,
             max_steps=args.num_steps,
-            fruitbot=True
+            fruitbot=True,
+            load_from=args.load_from,
+            save_every=args.save_freq
         )
         env.close()
     elif args.env == 'CartPole-v0':
@@ -143,6 +145,8 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--num_steps', type=int, default=4e6)
     parser.add_argument('--double_q', action='store_true', default=False)
+    parser.add_argument('--load_from', type=int, default=None)
+    parser.add_argument('--save_freq', type=int, default=None)
     args = parser.parse_args()
 
     assert args.env in ['procgen:procgen-fruitbot-v0', 'CartPole-v0']
