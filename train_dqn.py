@@ -110,7 +110,9 @@ def learn(env, args):
             double_q=args.double_q,
             logdir=args.logdir,
             max_steps=args.num_steps,
-            fruitbot=False
+            fruitbot=False,
+            load_from=args.load_from,
+            save_every=args.save_freq
         )
         env.close()
 

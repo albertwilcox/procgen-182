@@ -212,7 +212,7 @@ class QLearner(object):
                 self.q_model_target.set_weights(self.q_model.get_weights())
 
             if self.save_freq and self.num_param_updates % self.save_freq == 0:
-                self.q_model.save(os.path.join(self.logdir, 'model_%d.h5' % self.num_param_updates))
+                self.save(str(self.num_param_updates))
 
             self.num_param_updates += 1
 
@@ -243,6 +243,9 @@ class QLearner(object):
             logz.log_tabular("Elapsed_Time_Hours", hours)
             logz.dump_tabular()
 
+    def save(self, strr):
+        self.q_model.save(os.path.join(self.logdir, 'model_%s.h5' % strr))
+
 
 def learn(*args, **kwargs):
     alg = QLearner(*args, **kwargs)
@@ -255,4 +258,5 @@ def learn(*args, **kwargs):
         alg.log_progress()
         if alg.t > alg.max_steps:
             print("\nt = {} exceeds max_steps = {}".format(alg.t, alg.max_steps))
+            alg.save('final')
             sys.exit()
