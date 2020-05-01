@@ -9,6 +9,7 @@ import numpy as np
 import random
 import logz
 import tensorflow as tf
+from replay_buffer import *
 from collections import namedtuple
 from dqn_utils import *
 from replay_buffer import ReplayBuffer
@@ -18,7 +19,7 @@ class QLearner(object):
 
     def __init__(self,
                  env,
-                 q_model_builder,
+                 q_model_constructor,
                  optimizer_params,
                  exploration,
                  replay_buffer_size,
@@ -40,8 +41,8 @@ class QLearner(object):
         ----------
         env: gym.Env
             gym environment to train on.
-        q_model_builder: func
-            Function to create the model to use. It should accept the
+        q_model_constructor: function
+            Constructor of the model to use for computing the q function. It should accept the
             following named arguments:
                 input_shape: tuple
                     tensorflow tensor representing the input image
@@ -49,7 +50,6 @@ class QLearner(object):
                     number of actions
         optimizer_params: dict
             Specifying the constructor and kwargs, as well as learning rate
-            for the optimizer
         exploration: Schedule
             schedule for probability of chosing random action.
         replay_buffer_size: int
@@ -76,8 +76,9 @@ class QLearner(object):
             Maximum number of training steps. The number of *frames* is 4x this
             quantity (modulo the initial random no-op steps).
         """
-        assert type(env.observation_space) == gym.spaces.Box
-        assert type(env.action_space) == gym.spaces.Discrete
+        # We're not using gym anymore, for performance concerns
+        # assert type(env.observation_space) == gym.spaces.Box
+        # assert type(env.action_space) == gym.spaces.Discrete
 
         self.max_steps = int(max_steps)
         self.target_update_freq = target_update_freq
@@ -89,12 +90,13 @@ class QLearner(object):
         self.gamma = gamma
         self.env = env
 
-        img_h, img_w, img_c = self.env.observation_space.shape
+        # img_h, img_w, img_c = self.env.observation_space.shape
+        img_h, img_w, img_c = (64,64,3)
         input_shape = (img_h, img_w, frame_history_len * img_c)
 
         self.num_actions = self.env.action_space.n
 
-        self.q_model = q_model_builder(input_shape, self.num_actions)
+        self.q_model = q_model_constructor(input_shape, self.num_actions)
         self.q_model_target = tf.keras.models.clone_model(self.q_model)
         self.q_model_target.set_weights(self.q_model.get_weights())
         print(self.q_model.summary())
@@ -116,25 +118,34 @@ class QLearner(object):
         self.start_time = time.time()
         self.last_obs = self.env.reset() / 255.0
         self.t = 0
+        self.model_initialized = False;
 
-    @tf.function
-    def error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
+
+    def _error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
         q = self.q_model(obs_t)
         # TODO: this is the way I did this in my HW, but there might be a more efficient way. Do any of you have something better?
         action_q = tf.linalg.diag_part(tf.gather(q, actions_t, axis=1))
-
+        
         q_target = self.q_model_target(obs_tp1)
         if self.double_q:
-            target_actions = tf.math.argmax(q, axis=1)
+            q_future = self.q_model(obs_tp1)
+            target_actions = tf.math.argmax(q_future, axis=1)
             target_action_q = tf.linalg.diag_part(tf.gather(q_target, target_actions, axis=1))
         else:
             target_action_q = tf.reduce_max(q_target, axis=1)
 
-        mask_gamma = (1 - done_mask_t) * self.gamma
-        target = rew_t + mask_gamma * target_action_q
+        target = rew_t + (1 - done_mask_t) * self.gamma * target_action_q
+        tf.stop_gradient(target)
+
         total_error = tf.reduce_mean(huber_loss(target - action_q))
 
         return total_error
+
+    def _optimizer_update(self, obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch):
+        with tf.GradientTape() as tape:
+            error = self.error(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
+        grad = tape.gradient(error, self.q_model.trainable_variables)
+        self.optimizer.apply_gradients(zip(grad, self.q_model.trainable_variables))
 
     def step_env(self):
         """
@@ -152,6 +163,7 @@ class QLearner(object):
             a = np.argmax(outputs)
 
         # Step environment with that action, reset if `done==True`
+        
         obs, reward, done, info = self.env.step(a)
         obs = obs / 255.0
         self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
@@ -161,6 +173,9 @@ class QLearner(object):
             obs = obs / 255.0
 
         self.last_obs = obs
+
+        self.model_initialized = True;
+
 
     def update_model(self):
         """
@@ -176,16 +191,26 @@ class QLearner(object):
 
             # print('here')
 
-            with tf.GradientTape() as tape:
-                error = self.error(obs_batch.astype(np.float32),
-                                   next_obs_batch.astype(np.float32),
-                                   act_batch,
-                                   rew_batch.astype(np.float32),
-                                   done_mask_batch)
-            grad = tape.gradient(error, self.q_model.trainable_variables)
-            self.optimizer.apply_gradients(zip(grad, self.q_model.trainable_variables))
-
+            # with tf.GradientTape() as tape:
+            #     error = self.error(obs_batch.astype(np.float32),
+            #                        next_obs_batch.astype(np.float32),
+            #                        act_batch,
+            #                        rew_batch.astype(np.float32),
+            #                        done_mask_batch)
+            # grad = tape.gradient(error, self.q_model.trainable_variables)
+            # self.optimizer.apply_gradients(zip(grad, self.q_model.trainable_variables))
+            #
+            self.optimizer_update(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
+            
             if self.num_param_updates % self.target_update_freq == 0:
+                # IDK if this is correct.
+                # def update_target_fn():
+                #     temp = self.q_model
+                #     self.q_model = self.q_model_target
+                #     self.q_model_target = temp
+                #     QLearner.error = tf.function(QLearner._error)
+                #     QLearner.optimizer_update = tf.function(QLearner._optimizer_update)
+                # update_target_fn()
                 # TODO: figure out how to update target model
                 # Code from hw for reference:
                 # update_target_fn = []
@@ -227,6 +252,9 @@ class QLearner(object):
 
 def learn(*args, **kwargs):
     alg = QLearner(*args, **kwargs)
+    #QLearner.update_model = tf.function(QLearner.update_model)
+    QLearner.error = tf.function(QLearner._error)
+    QLearner.optimizer_update = tf.function(QLearner._optimizer_update)
     while True:
         alg.step_env()
         # The environment should have been advanced one step (and reset if done

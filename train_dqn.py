@@ -1,10 +1,12 @@
 import os, random, time, argparse, gym, sys
 import logz
-from gym import wrappers
+import procgen
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.layers as layers
 import dqn
+import gym
+from gym import wrappers
 from dqn_utils import *
 from schedulers import *
 
@@ -43,14 +45,14 @@ def learn(env, args):
         ], outside_value=0.01
     )
 
-    q_model_func = fruitbot_model
+    q_model_constructor = fruitbot_model
 
     dqn.learn(
         env=env,
-        q_model_builder=q_model_func,
+        q_model_constructor=q_model_constructor,
         optimizer_params=optimizer,
         exploration=exploration_schedule,
-        replay_buffer_size=1000000,
+        replay_buffer_size=100000,
         batch_size=32,
         gamma=0.99,
         learning_starts=50000,
@@ -76,11 +78,13 @@ def set_global_seeds(i):
 
 
 def get_env(args):
-    env = gym.make('procgen:procgen-fruitbot-v0', distribution_mode='easy')
+    env = gym.make("procgen:procgen-fruitbot-v0", distribution_mode='easy')
+
     set_global_seeds(args.seed)
     env.seed(args.seed)
     expt_dir = os.path.join(args.logdir, "gym")
     env = wrappers.Monitor(env, expt_dir, force=True)
+
     # if args.env == 'CartPole-v0':
     #     env = gym.make(args.env)
     #     set_global_seeds(args.seed)
