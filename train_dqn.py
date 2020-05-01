@@ -1,10 +1,12 @@
 import os, random, time, argparse, gym, sys
 import logz
-from gym import wrappers
+import procgen
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras.layers as layers
 import dqn
+import gym
+from gym import wrappers
 from dqn_utils import *
 from schedulers import *
 
@@ -17,10 +19,12 @@ def fruitbot_model(num_actions) -> tf.keras.Model:
     conv2 = tf.keras.layers.Conv2D(64, 4, 2, activation='relu')
     conv3 = tf.keras.layers.Conv2D(64, 3, 1, activation='relu')
 
+    flatten = tf.keras.layers.Flatten()
+
     fc1 = tf.keras.layers.Dense(512)
     fc2 = tf.keras.layers.Dense(num_actions)
 
-    return tf.keras.Sequential([conv1, conv2, conv3, fc1, fc2])
+    return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2])
 
 
 # def atari_model(img_in, num_actions, scope, reuse=False):
@@ -60,7 +64,7 @@ def learn(env, args):
     lr_schedule = ConstantSchedule(1e-4)
 
     optimizer = dqn.OptimizerSpec(
-        constructor=tf.train.AdamOptimizer,
+        constructor=tf.keras.optimizers.Adam,
         kwargs=dict(epsilon=1e-4),
         lr_schedule=lr_schedule
     )
@@ -74,14 +78,14 @@ def learn(env, args):
         ], outside_value=0.01
     )
 
-    q_model = fruitbot_model(env.observation_space.shape)
+    q_model_constructor = fruitbot_model
 
     dqn.learn(
         env=env,
-        q_model=q_model,
+        q_model_constructor=q_model_constructor,
         optimizer_spec=optimizer,
         exploration=exploration_schedule,
-        replay_buffer_size=1000000,
+        replay_buffer_size=100000,
         batch_size=32,
         gamma=0.99,
         learning_starts=50000,
@@ -102,17 +106,19 @@ def set_global_seeds(i):
     except ImportError:
         pass
     else:
-        tf.set_random_seed(i)
+        tf.random.set_seed(i)
     np.random.seed(i)
     random.seed(i)
 
 
 def get_env(args):
-    env = gym.make('procgen:procgen-fruitbot-v0', distribution_mode='easy')
+    env = gym.make("procgen:procgen-fruitbot-v0")
+
     set_global_seeds(args.seed)
     env.seed(args.seed)
     expt_dir = os.path.join(args.logdir, "gym")
     env = wrappers.Monitor(env, expt_dir, force=True)
+
     # if args.env == 'CartPole-v0':
     #     env = gym.make(args.env)
     #     set_global_seeds(args.seed)
@@ -150,7 +156,6 @@ if __name__ == "__main__":
     parser.add_argument('--double_q', action='store_true', default=False)
     args = parser.parse_args()
 
-    assert args.env in ['PongNoFrameskip-v4', 'CartPole-v0']
     if args.seed is None:
         args.seed = random.randint(0, 9999)
     print('random seed = {}'.format(args.seed))
