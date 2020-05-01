@@ -31,7 +31,8 @@ class QLearner(object):
                  target_update_freq,
                  double_q=True,
                  logdir=None,
-                 max_steps=2e8):
+                 max_steps=2e8,
+                 fruitbot=False):
         """Run Deep Q-learning algorithm.
 
         You can specify your own convnet using `q_func`.
@@ -89,9 +90,13 @@ class QLearner(object):
         self.double_q = double_q
         self.gamma = gamma
         self.env = env
+        self.fruitbot = fruitbot
 
-        img_h, img_w, img_c = self.env.observation_space.shape
-        input_shape = (img_h, img_w, frame_history_len * img_c)
+        if fruitbot:
+            img_h, img_w, img_c = self.env.observation_space.shape
+            input_shape = (img_h, img_w, frame_history_len * img_c)
+        else:
+            input_shape = self.env.observation_space.shape
 
         self.num_actions = self.env.action_space.n
 
@@ -115,16 +120,23 @@ class QLearner(object):
         self.best_mean_episode_reward = -float('inf')
         self.log_every_n_steps = 1000
         self.start_time = time.time()
-        self.last_obs = self.env.reset() / 255.0
+        if self.fruitbot:
+            self.last_obs = self.env.reset() / 255.0
+        else:
+            self.last_obs = self.env.reset()
         self.t = 0
 
 
     @tf.function
     def error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
-        obs_t = tf.cast(obs_t, tf.float32)/255.0
-        obs_tp1 = tf.cast(obs_tp1, tf.float32)/255.0
+        if self.fruitbot:
+            obs_t = tf.cast(obs_t, tf.float32)/255.0
+            obs_tp1 = tf.cast(obs_tp1, tf.float32)/255.0
+        else:
+            obs_t = tf.cast(obs_t, tf.float32)
+            obs_tp1 = tf.cast(obs_tp1, tf.float32)
+
         q = self.q_model(obs_t)
-        # TODO: this is the way I did this in my HW, but there might be a more efficient way. Do any of you have something better?
         action_q = tf.linalg.diag_part(tf.gather(q, actions_t, axis=1))
         
         q_target = self.q_model_target(obs_tp1)
@@ -171,7 +183,7 @@ class QLearner(object):
         self.replay_buffer.store_effect(self.replay_buffer_idx, a, reward, done)
         if done:
             obs = self.env.reset()
-            obs = obs
+            obs = obs # why is this line here lol
 
         self.last_obs = obs
 

@@ -4,7 +4,7 @@ import random
 
 class ReplayBuffer(object):
 
-    def __init__(self, size, frame_history_len):
+    def __init__(self, size, frame_history_len, fruitbot=False):
         """This is a memory efficient implementation of the replay buffer.
 
         The sepecific memory optimizations use here are:
@@ -32,6 +32,7 @@ class ReplayBuffer(object):
         cartpole: bool
             If True, CartPole, else Pong
         """
+        self.fruitbot = fruitbot
         self.size = size
         self.frame_history_len = frame_history_len
         self.next_idx = 0
@@ -158,7 +159,7 @@ class ReplayBuffer(object):
             Index at which the frame is stored. To be used for `store_effect` later.
         """
         if self.obs is None:
-            self.obs    = np.empty([self.size] + list(frame.shape), dtype=np.uint8)
+            self.obs    = np.empty([self.size] + list(frame.shape), dtype=np.uint8 if self.fruitbot else np.float32)
             self.action = np.empty([self.size],                     dtype=np.int32)
             self.reward = np.empty([self.size],                     dtype=np.float32)
             self.done   = np.empty([self.size],                     dtype=np.bool)
