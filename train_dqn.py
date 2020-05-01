@@ -9,61 +9,30 @@ from dqn_utils import *
 from schedulers import *
 
 
-def fruitbot_model(num_actions) -> tf.keras.Model:
+def fruitbot_model(input_shape, num_actions) -> tf.keras.Model:
     """
     Returns a keras model for Q learning
     """
-    conv1 = tf.keras.layers.Conv2D(32, 8, 4, activation='relu')
-    conv2 = tf.keras.layers.Conv2D(64, 4, 2, activation='relu')
-    conv3 = tf.keras.layers.Conv2D(64, 3, 1, activation='relu')
+    conv1 = tf.keras.layers.Conv2D(32, (8, 8), 4, activation='relu',
+                                   data_format='channels_last', input_shape=input_shape)
+    conv2 = tf.keras.layers.Conv2D(64, (4, 4), 2, activation='relu', data_format='channels_last')
+    conv3 = tf.keras.layers.Conv2D(64, (3, 3), 1, activation='relu', data_format='channels_last')
+
+    flatten = tf.keras.layers.Flatten()
 
     fc1 = tf.keras.layers.Dense(512)
     fc2 = tf.keras.layers.Dense(num_actions)
 
-    return tf.keras.Sequential([conv1, conv2, conv3, fc1, fc2])
-
-
-# def atari_model(img_in, num_actions, scope, reuse=False):
-#     with tf.variable_scope(scope, reuse=reuse):
-#         out = img_in
-#         with tf.variable_scope("convnet"):
-#             out = layers.convolution2d(out, num_outputs=32,
-#                     kernel_size=8, stride=4, activation_fn=tf.nn.relu)
-#             out = layers.convolution2d(out, num_outputs=64,
-#                     kernel_size=4, stride=2, activation_fn=tf.nn.relu)
-#             out = layers.convolution2d(out, num_outputs=64,
-#                     kernel_size=3, stride=1, activation_fn=tf.nn.relu)
-#         out = layers.flatten(out)
-#         with tf.variable_scope("action_value"):
-#             out = layers.fully_connected(out, num_outputs=512,
-#                     activation_fn=tf.nn.relu)
-#             out = layers.fully_connected(out, num_outputs=num_actions,
-#                     activation_fn=None)
-#         return out
-#
-#
-# def cartpole_model(x_input, num_actions, scope, reuse=False):
-#     """For CartPole we'll use a smaller network.
-#     """
-#     with tf.variable_scope(scope, reuse=reuse):
-#         out = x_input
-#         out = layers.fully_connected(out, num_outputs=32,
-#                 activation_fn=tf.nn.tanh)
-#         out = layers.fully_connected(out, num_outputs=32,
-#                 activation_fn=tf.nn.tanh)
-#         out = layers.fully_connected(out, num_outputs=num_actions,
-#                 activation_fn=None)
-#         return out
+    return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2])
 
 
 def learn(env, args):
-    lr_schedule = ConstantSchedule(1e-4)
 
-    optimizer = dqn.OptimizerSpec(
-        constructor=tf.train.AdamOptimizer,
-        kwargs=dict(epsilon=1e-4),
-        lr_schedule=lr_schedule
-    )
+    optimizer = {
+        'type': tf.keras.optimizers.Adam,
+        'learning_rate': 1e-4,
+        'grad_norm_clipping': 10
+    }
 
     limit = max(int(args.num_steps/2), 2e6)
 
@@ -74,12 +43,12 @@ def learn(env, args):
         ], outside_value=0.01
     )
 
-    q_model = fruitbot_model(env.observation_space.shape)
+    q_model_func = fruitbot_model
 
     dqn.learn(
         env=env,
-        q_model=q_model,
-        optimizer_spec=optimizer,
+        q_model_builder=q_model_func,
+        optimizer_params=optimizer,
         exploration=exploration_schedule,
         replay_buffer_size=1000000,
         batch_size=32,
@@ -88,7 +57,6 @@ def learn(env, args):
         learning_freq=4,
         frame_history_len=4,
         target_update_freq=10000,
-        grad_norm_clipping=10,
         double_q=args.double_q,
         logdir=args.logdir,
         max_steps=args.num_steps
@@ -102,7 +70,7 @@ def set_global_seeds(i):
     except ImportError:
         pass
     else:
-        tf.set_random_seed(i)
+        tf.random.set_seed(i)
     np.random.seed(i)
     random.seed(i)
 
@@ -144,13 +112,11 @@ def get_env(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('env', type=str)
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--num_steps', type=int, default=4e6)
     parser.add_argument('--double_q', action='store_true', default=False)
     args = parser.parse_args()
 
-    assert args.env in ['PongNoFrameskip-v4', 'CartPole-v0']
     if args.seed is None:
         args.seed = random.randint(0, 9999)
     print('random seed = {}'.format(args.seed))
@@ -160,7 +126,7 @@ if __name__ == "__main__":
 
     if not(os.path.exists('data_dqn')):
         os.makedirs('data_dqn')
-    logdir = exp_name+ '_' +args.env+ '_' +time.strftime("%d-%m-%Y_%H-%M-%S")
+    logdir = exp_name + '_' + time.strftime("%d-%m-%Y_%H-%M-%S")
     logdir = os.path.join('data_dqn', logdir)
     logz.configure_output_dir(logdir)
     args.logdir = logdir

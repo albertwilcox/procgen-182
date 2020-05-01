@@ -11,15 +11,15 @@ import logz
 import tensorflow as tf
 from collections import namedtuple
 from dqn_utils import *
-OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
+from replay_buffer import ReplayBuffer
 
 
 class QLearner(object):
 
     def __init__(self,
                  env,
-                 q_model,
-                 optimizer_spec,
+                 q_model_builder,
+                 optimizer_params,
                  exploration,
                  replay_buffer_size,
                  batch_size,
@@ -28,7 +28,6 @@ class QLearner(object):
                  learning_freq,
                  frame_history_len,
                  target_update_freq,
-                 grad_norm_clipping,
                  double_q=True,
                  logdir=None,
                  max_steps=2e8):
@@ -41,20 +40,15 @@ class QLearner(object):
         ----------
         env: gym.Env
             gym environment to train on.
-        q_model: function
-            Model to use for computing the q function. It should accept the
+        q_model_builder: func
+            Function to create the model to use. It should accept the
             following named arguments:
-                img_in: tf.Tensor
+                input_shape: tuple
                     tensorflow tensor representing the input image
                 num_actions: int
                     number of actions
-                scope: str
-                    scope in which all the model related variables
-                    should be created
-                reuse: bool
-                    whether previously created variables should be reused.
-        optimizer_spec: OptimizerSpec
-            Specifying the constructor and kwargs, as well as learning rate schedule
+        optimizer_params: dict
+            Specifying the constructor and kwargs, as well as learning rate
             for the optimizer
         exploration: Schedule
             schedule for probability of chosing random action.
@@ -73,8 +67,6 @@ class QLearner(object):
         target_update_freq: int
             How many experience replay rounds (not steps!) to perform between
             each update to the target Q network
-        grad_norm_clipping: float or None
-            If not None gradients' norms are clipped to this value.
         double_q: bool
             If True, use double Q-learning to compute target values. Otherwise, vanilla DQN.
             https://papers.nips.cc/paper/3964-double-q-learning.pdf
@@ -89,7 +81,6 @@ class QLearner(object):
 
         self.max_steps = int(max_steps)
         self.target_update_freq = target_update_freq
-        self.optimizer_spec = optimizer_spec
         self.batch_size = batch_size
         self.learning_freq = learning_freq
         self.learning_starts = learning_starts
@@ -103,24 +94,30 @@ class QLearner(object):
 
         self.num_actions = self.env.action_space.n
 
-        self.q_model = q_model
-        self.q_model_target = None # TODO: duplicate this model somehow
+        self.q_model = q_model_builder(input_shape, self.num_actions)
+        self.q_model_target = tf.keras.models.clone_model(self.q_model)
+        self.q_model_target.set_weights(self.q_model.get_weights())
+        print(self.q_model.summary())
 
-        self.optimizer = None # TODO: initialize a TF optimizer
+        opt = optimizer_params.get('type', tf.keras.optimizers.Adam)
+        lr = optimizer_params.get('learning_rate', 1e-4)
+        grad_norm_clipping = optimizer_params.get('grad_norm_clipping', 10)
+        self.optimizer = opt(learning_rate=lr, clipnorm=grad_norm_clipping)
 
         self.replay_buffer = ReplayBuffer(replay_buffer_size, frame_history_len)
         self.replay_buffer_idx = None
 
+        self.initialized = False
         self.num_param_updates = 0
         self.mean_episode_reward = -float('nan')
         self.std_episode_reward = -float('nan')
         self.best_mean_episode_reward = -float('inf')
-        self.log_every_n_steps = 10000
+        self.log_every_n_steps = 1000
         self.start_time = time.time()
-        self.last_obs = self.env.reset()
+        self.last_obs = self.env.reset() / 255.0
         self.t = 0
 
-
+    @tf.function
     def error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
         q = self.q_model(obs_t)
         # TODO: this is the way I did this in my HW, but there might be a more efficient way. Do any of you have something better?
@@ -133,7 +130,8 @@ class QLearner(object):
         else:
             target_action_q = tf.reduce_max(q_target, axis=1)
 
-        target = rew_t + (1 - done_mask_t) * self.gamma * target_action_q
+        mask_gamma = (1 - done_mask_t) * self.gamma
+        target = rew_t + mask_gamma * target_action_q
         total_error = tf.reduce_mean(huber_loss(target - action_q))
 
         return total_error
@@ -145,19 +143,22 @@ class QLearner(object):
 
         # Find an action with epsilon exploration
         ep = self.exploration.value(self.t)
-        if not self.model_initialized or np.random.random() < ep:
+        # if not self.model_initialized or np.random.random() < ep:
+        if np.random.random() < ep:
             a = np.random.randint(self.num_actions)
         else:
             last_obs = self.replay_buffer.encode_recent_observation()
-            outputs = self.q_model(last_obs)
+            outputs = self.q_model(np.expand_dims(last_obs, axis=0).astype(np.float32))
             a = np.argmax(outputs)
 
         # Step environment with that action, reset if `done==True`
         obs, reward, done, info = self.env.step(a)
+        obs = obs / 255.0
         self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
         self.replay_buffer.store_effect(self.replay_buffer_idx, a, reward, done)
         if done:
             obs = self.env.reset()
+            obs = obs / 255.0
 
         self.last_obs = obs
 
@@ -171,16 +172,16 @@ class QLearner(object):
                 self.t % self.learning_freq == 0 and
                 self.replay_buffer.can_sample(self.batch_size)):
 
-            # TODO: Pretty sure the following is unnecesary, but that should be verified
-            # if not self.model_initialized:
-            #     self.session.run(tf.global_variables_initializer())
-            #     self.session.run(self.update_target_fn)
-            #     self.model_initialized = True
-
             obs_batch, act_batch, rew_batch, next_obs_batch, done_mask_batch = self.replay_buffer.sample(self.batch_size)
 
+            # print('here')
+
             with tf.GradientTape() as tape:
-                error = self.error(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
+                error = self.error(obs_batch.astype(np.float32),
+                                   next_obs_batch.astype(np.float32),
+                                   act_batch,
+                                   rew_batch.astype(np.float32),
+                                   done_mask_batch)
             grad = tape.gradient(error, self.q_model.trainable_variables)
             self.optimizer.apply_gradients(zip(grad, self.q_model.trainable_variables))
 
@@ -192,7 +193,7 @@ class QLearner(object):
                 #                            sorted(target_q_func_vars, key=lambda v: v.name)):
                 #     update_target_fn.append(var_target.assign(var))
                 # self.update_target_fn = tf.group(*update_target_fn)
-                pass
+                self.q_model_target.set_weights(self.q_model.get_weights())
 
             self.num_param_updates += 1
 
@@ -211,7 +212,7 @@ class QLearner(object):
 
         # See the `log.txt` file for where these statistics are stored.
         if self.t % self.log_every_n_steps == 0:
-            lr = self.optimizer_spec.lr_schedule.value(self.t)
+            # lr = self.optimizer_spec.lr_schedule.value(self.t)
             hours = (time.time() - self.start_time) / (60. * 60.)
             logz.log_tabular("Steps", self.t)
             logz.log_tabular("Avg_Last_100_Episodes", self.mean_episode_reward)
@@ -219,7 +220,7 @@ class QLearner(object):
             logz.log_tabular("Best_Avg_100_Episodes", self.best_mean_episode_reward)
             logz.log_tabular("Num_Episodes", len(episode_rewards))
             logz.log_tabular("Exploration_Epsilon", self.exploration.value(self.t))
-            logz.log_tabular("Adam_Learning_Rate", lr)
+            # logz.log_tabular("Adam_Learning_Rate", lr)
             logz.log_tabular("Elapsed_Time_Hours", hours)
             logz.dump_tabular()
 
