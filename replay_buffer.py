@@ -42,8 +42,7 @@ class ReplayBuffer(object):
         self.reward = None
         self.done = None
 
-    @staticmethod
-    def sample_n_unique(sampling_f, n):
+    def sample_n_unique(self, sampling_f, n):
         """Helper function. Given a function `sampling_f` that returns comparable
         objects, sample n such unique objects.
         """
@@ -58,16 +57,17 @@ class ReplayBuffer(object):
         """Returns true if `batch_size` different transitions can be sampled from the buffer."""
         return batch_size + 1 <= self.num_in_buffer
 
-    def _encode_sample(self, idxes):
+    def _encode_sample(self, idxes, multistep_len):
+        idxes = np.array(idxes)
         obs_batch = np.concatenate([self._encode_observation(idx)[None] for idx in idxes], 0)
         act_batch = self.action[idxes]
         rew_batch      = self.reward[idxes]
-        next_obs_batch = np.concatenate([self._encode_observation(idx + 1)[None] for idx in idxes], 0)
-        done_mask      = np.array([1.0 if self.done[idx] else 0.0 for idx in idxes], dtype=np.float32)
+        next_obs_batch   = np.concatenate([self._encode_observation(idx + multistep_len)[None] for idx in idxes], 0)
+        done_mask = self.done[idxes].astype(np.float32)
 
         return obs_batch, act_batch, rew_batch, next_obs_batch, done_mask
 
-    def sample(self, batch_size):
+    def sample(self, batch_size, multistep_len):
         """Sample `batch_size` different transitions.
 
         i-th sample transition is the following:
@@ -101,8 +101,26 @@ class ReplayBuffer(object):
             Array of shape (batch_size,) and dtype np.float32
         """
         assert self.can_sample(batch_size)
-        idxes = self.sample_n_unique(lambda: random.randint(0, self.num_in_buffer - 2), batch_size)
-        return self._encode_sample(idxes)
+        idxes = self.sample_n_unique(lambda: random.randint(0, self.num_in_buffer - 1 - multistep_len), batch_size)
+        return self._encode_sample(idxes, multistep_len)
+
+    def set_recent_multistep_reward(self, multistep_len, gamma):
+        idx = self.next_idx-multistep_len-1
+        if idx < 0:
+            if self.num_in_buffer < self.size-10:
+                return
+            else:
+                idx = idx + self.size 
+        if idx >= 0:
+            idxes = np.array([i % self.size for i in range(idx,idx+multistep_len)])
+            done_masks = self.done[idxes]
+            rews = np.array([self.reward[(idx+i) % self.size] * (gamma**i) for i in range(multistep_len)]).cumsum()
+            if not np.any(done_masks):
+                self.reward[idx] = rews[-1]
+            else:
+                self.reward[idx] = rews[np.argmax(done_masks)]
+                self.done[idx] = True
+            #print(rews, done_masks, self.reward[idx], self.done[idx])
 
     def encode_recent_observation(self):
         """Return the most recent `frame_history_len` frames.

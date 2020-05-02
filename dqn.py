@@ -151,6 +151,8 @@ class QLearner(object):
             self.last_obs = self.env.reset()
         self.t = 0
 
+        self.multi_step_len = 3
+
     @tf.function
     def error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
         if self.fruitbot:
@@ -171,7 +173,7 @@ class QLearner(object):
         else:
             target_action_q = tf.reduce_max(q_target, axis=1)
 
-        target = rew_t + (1 - done_mask_t) * self.gamma * target_action_q
+        target = rew_t + (1 - done_mask_t) * (self.gamma**self.multi_step_len) * target_action_q
         tf.stop_gradient(target)
 
         total_error = tf.reduce_mean(huber_loss(target - action_q))
@@ -254,6 +256,7 @@ class QLearner(object):
 
         self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
         self.replay_buffer.store_effect(self.replay_buffer_idx, a, reward, done)
+        self.replay_buffer.set_recent_multistep_reward(self.multi_step_len,self.gamma)
         if done:
             obs = self.env.reset()
             obs = obs # why is this line here lol
@@ -270,7 +273,7 @@ class QLearner(object):
                 self.t % self.learning_freq == 0 and
                 self.replay_buffer.can_sample(self.batch_size)):
 
-            obs_batch, act_batch, rew_batch, next_obs_batch, done_mask_batch = self.replay_buffer.sample(self.batch_size)
+            obs_batch, act_batch, rew_batch, next_obs_batch, done_mask_batch = self.replay_buffer.sample(self.batch_size, self.multi_step_len)
 
             self.optimizer_update(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
             
