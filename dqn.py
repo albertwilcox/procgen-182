@@ -143,7 +143,7 @@ class QLearner(object):
         self.mean_episode_reward = -float('nan')
         self.std_episode_reward = -float('nan')
         self.best_mean_episode_reward = -float('inf')
-        self.log_every_n_steps = 1000
+        self.log_every_n_steps = 10000 if fruitbot else 1000
         self.start_time = time.time()
         if self.fruitbot:
             self.last_obs = self.env.reset() / 255.0
@@ -194,16 +194,23 @@ class QLearner(object):
         action_z_dist = tf.gather_nd(z_dist, tf.expand_dims(actions_t, 1), batch_dims=1) # shape (batch, dist_param)
 
         z_dist_target = self.q_model_target(obs_tp1)
+        vals = tf.range(self.dist_param) * self.dist_delta + self.dist_v_min  # shape (dist_param,)
         if self.double_q:
             pass
         else:
-            multiplier = tf.range(self.dist_param) * self.dist_delta # shape (dist_param,)
-            q = tf.reduce_sum(z_dist_target * multiplier, axis=2) # shape (batch, num_actions)
+            q = tf.reduce_sum(z_dist_target * vals, axis=2) # shape (batch, num_actions)
             actions = tf.math.argmax(q, axis=1) # shape (batch,)
             action_z_dist_target = tf.gather_nd(z_dist_target, tf.expand_dims(actions, 1), batch_dims=1) # shape (batch, dist_param)
 
         # Project t+1 predictions for comparison
-
+        # projections shape: (batch, dist_param)
+        projections = tf.broadcast_to(vals * self.gamma, (self.batch_size, self.dist_param)) \
+                      + tf.transpose(tf.broadcast_to(rew_t, (self.dist_param, self.batch_size)))
+        projections = projections - self.dist_v_min
+        projections = tf.math.minimum(projections, self.dist_v_max)
+        projections = tf.math.maximum(projections, self.dist_v_min)
+        projections = projections / self.dist_delta
+        targets = tf.zeros((self.batch_size, self.dist_param))
 
 
 
