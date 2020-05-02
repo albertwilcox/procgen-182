@@ -9,11 +9,10 @@ import numpy as np
 import random
 import logz
 import tensorflow as tf
-from replay_buffer import *
 from collections import namedtuple
 from dqn_utils import *
-from replay_buffer import ReplayBuffer
-
+from tf_agents.replay_buffers import tf_uniform_replay_buffer
+from tf_agents.specs import tensor_spec
 
 class QLearner(object):
 
@@ -31,13 +30,7 @@ class QLearner(object):
                  target_update_freq,
                  double_q=True,
                  logdir=None,
-                 max_steps=2e8,
-                 fruitbot=False,
-                 dist_param=0,
-                 dist_v_min=0,
-                 dist_v_max=0,
-                 load_from=None,
-                 save_every=None,):
+                 max_steps=2e8):
         """Run Deep Q-learning algorithm.
 
         You can specify your own convnet using `q_func`.
@@ -86,46 +79,25 @@ class QLearner(object):
         # assert type(env.observation_space) == gym.spaces.Box
         # assert type(env.action_space) == gym.spaces.Discrete
 
-        # Training params
         self.max_steps = int(max_steps)
         self.target_update_freq = target_update_freq
         self.batch_size = batch_size
         self.learning_freq = learning_freq
         self.learning_starts = learning_starts
         self.exploration = exploration
-        self.env = env
-
-        # Model params
         self.double_q = double_q
         self.gamma = gamma
-        self.fruitbot = fruitbot
+        self.env = env
+        self.frame_history_len = frame_history_len
 
-        # Distributional DQN specific parameters
-        if dist_param:
-            self.dist_param = dist_param
-            self.dist_v_min = dist_v_min
-            self.dist_v_max = dist_v_max
-            self.dist_delta = (self.dist_v_max - self.dist_v_min) / self.dist_param
+        self.img_h, self.img_w, self.img_c = self.env.observation_space.shape
 
-        # Misc Params
-        self.save_freq = save_every
-        self.logdir = logdir
+        img_h, img_w, img_c = self.env.observation_space.shape
+        input_shape = (img_h, img_w, frame_history_len * img_c)
 
-        if fruitbot:
-            img_h, img_w, img_c = self.env.observation_space.shape
-            input_shape = (img_h, img_w, frame_history_len * img_c)
-        else:
-            input_shape = self.env.observation_space.shape
+        self.num_actions = self.env.action_space.n
 
-        if fruitbot:
-            self.num_actions = 4
-        else:
-            self.num_actions = self.env.action_space.n
-
-        if load_from:
-            self.q_model = tf.keras.models.load_model(load_from)
-        else:
-            self.q_model = q_model_constructor(input_shape, self.num_actions)
+        self.q_model = q_model_constructor(input_shape, self.num_actions)
         self.q_model_target = tf.keras.models.clone_model(self.q_model)
         self.q_model_target.set_weights(self.q_model.get_weights())
         print(self.q_model.summary())
@@ -135,8 +107,22 @@ class QLearner(object):
         grad_norm_clipping = optimizer_params.get('grad_norm_clipping', 10)
         self.optimizer = opt(learning_rate=lr, clipnorm=grad_norm_clipping)
 
+        '''
         self.replay_buffer = ReplayBuffer(replay_buffer_size, frame_history_len)
         self.replay_buffer_idx = None
+        '''
+
+        self.input_dtype = tf.float32
+        self.current_frame_history = tf.Variable(tf.zeros(input_shape, dtype=self.input_dtype))
+
+        data_spec = (
+            tf.TensorSpec([img_h, img_w, img_c], tf.uint8, 'frame'),
+            tf.TensorSpec([1], tf.int32, 'action'),
+            tf.TensorSpec([1], tf.float32, 'reward'),
+            tf.TensorSpec([1], tf.bool, 'doneMask')
+        )
+
+        self.replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(data_spec, batch_size = self.batch_size, max_length = replay_buffer_size)
 
         self.initialized = False
         self.num_param_updates = 0
@@ -145,74 +131,94 @@ class QLearner(object):
         self.best_mean_episode_reward = -float('inf')
         self.log_every_n_steps = 1000
         self.start_time = time.time()
-        if self.fruitbot:
-            self.last_obs = self.env.reset() / 255.0
-        else:
-            self.last_obs = self.env.reset()
+        self.last_obs = self.env.reset()
         self.t = 0
 
     @tf.function
-    def error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
-        if self.fruitbot:
-            obs_t = tf.cast(obs_t, tf.float32) / 255.0
-            obs_tp1 = tf.cast(obs_tp1, tf.float32) / 255.0
-        else:
-            obs_t = tf.cast(obs_t, tf.float32)
-            obs_tp1 = tf.cast(obs_tp1, tf.float32)
+    def reset_expl_observations(self, frame):
+        n_frame_history = tf.zeros(self.current_frame_history.shape, dtype=self.input_dtype)
+        self.current_frame_history.assign(n_frame_history)
 
+    @tf.function
+    def add_expl_observation(self, frame):
+        #print(self.current_frame_history.shape)
+        #print(self.current_frame_history[...,self.img_c:].shape,frame.shape)
+        n_frame_history = tf.concat((self.current_frame_history[...,self.img_c:],tf.cast(frame,dtype=self.input_dtype) / 255.0), axis=2)
+        self.current_frame_history.assign(n_frame_history)
+
+    @tf.function
+    def get_next_qs(self):
+        return self.q_model(self.current_frame_history[None])[0]
+
+    @tf.function
+    def get_next_action(self):
+        return tf.argmax(self.q_model(self.current_frame_history[None])[0])
+
+    @tf.function
+    def error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t, start_mask_t):
+        obs_t = tf.cast(obs_t, self.input_dtype)/255.0
+        obs_tp1 = tf.cast(obs_tp1, self.input_dtype)/255.0
         q = self.q_model(obs_t)
-        action_q = tf.gather_nd(q, tf.expand_dims(actions_t, 1), batch_dims=1)
-
+        # TODO: this is the way I did this in my HW, but there might be a more efficient way. Do any of you have something better?
+        action_q = tf.linalg.diag_part(tf.gather(q, actions_t, axis=1))
+        
         q_target = self.q_model_target(obs_tp1)
         if self.double_q:
             q_future = self.q_model(obs_tp1)
             target_actions = tf.math.argmax(q_future, axis=1)
-            target_action_q = tf.gather_nd(q_target, tf.expand_dims(target_actions, 1), batch_dims=1)
+            target_action_q = tf.linalg.diag_part(tf.gather(q_target, target_actions, axis=1))
         else:
             target_action_q = tf.reduce_max(q_target, axis=1)
 
         target = rew_t + (1 - done_mask_t) * self.gamma * target_action_q
         tf.stop_gradient(target)
 
-        total_error = tf.reduce_mean(huber_loss(target - action_q))
+        total_error = tf.reduce_mean(huber_loss((target - action_q)*(1.0-start_mask_t)))
 
         return total_error
 
     @tf.function
-    def dist_error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
-        """
-        Error for a distributional DQN
-        """
-        if self.fruitbot:
-            obs_t = tf.cast(obs_t, tf.float32)/255.0
-            obs_tp1 = tf.cast(obs_tp1, tf.float32)/255.0
-        else:
-            obs_t = tf.cast(obs_t, tf.float32)
-            obs_tp1 = tf.cast(obs_tp1, tf.float32)
-
-        z_dist = self.q_model(obs_t) # shape (batch, num_actions, dist_param)
-        action_z_dist = tf.gather_nd(z_dist, tf.expand_dims(actions_t, 1), batch_dims=1) # shape (batch, dist_param)
-
-        z_dist_target = self.q_model_target(obs_tp1)
-        if self.double_q:
-            pass
-        else:
-            multiplier = tf.range(self.dist_param) * self.dist_delta # shape (dist_param,)
-            q = tf.reduce_sum(z_dist_target * multiplier, axis=2) # shape (batch, num_actions)
-            actions = tf.math.argmax(q, axis=1) # shape (batch,)
-            action_z_dist_target = tf.gather_nd(z_dist_target, tf.expand_dims(actions, 1), batch_dims=1) # shape (batch, dist_param)
-
-        # Project t+1 predictions for comparison
-
-
-
-
-    @tf.function
-    def optimizer_update(self, obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch):
+    def optimizer_update(self, obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch, start_mask_batch):
         with tf.GradientTape() as tape:
-            error = self.error(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
+            error = self.error(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch, start_mask_batch)
         grad = tape.gradient(error, self.q_model.trainable_variables)
         self.optimizer.apply_gradients(zip(grad, self.q_model.trainable_variables))
+
+    @tf.function
+    def opt_update_from_replay(self):
+        '''
+        for reference:
+
+        data_spec = (
+            tf.TensorSpec([img_h, img_w, img_c], tf.uint8, 'frame'),
+            tf.TensorSpec([1], tf.int32, 'action'),
+            tf.TensorSpec([1], tf.float32, 'reward'),
+            tf.TensorSpec([1], tf.bool, 'doneMask')
+        )
+        batch[i][time_step] corresponds to dataspec[i][time_step]
+
+        '''
+
+        batch = self.replay_buffer.get_next(sample_batch_size=self.batch_size, num_steps=self.frame_history_len+1)[0]
+        #print(len(batch),len(batch[0]))
+        #print(len(batch),len(batch[1]))
+        #print(batch[1][0])
+        obs_perm  = (0,2,3,1,4)
+        obs_shape = (self.batch_size, self.img_h, self.img_w, self.img_c*self.frame_history_len)
+        obs_t   = tf.reshape(tf.transpose(batch[0][:,:-1], perm=obs_perm), obs_shape)
+        obs_tp1 = tf.reshape(tf.transpose(batch[0][:,1: ], perm=obs_perm), obs_shape)
+
+        act_t        = batch[1][:,-2][:,0]
+        rew_t        = batch[2][:,-2][:,0]
+        done_mask_t  = tf.cast(batch[3][:,-2],tf.float32)[:,0]
+        
+        # loss is 0 if start mask is true, because this timestep corresponds to buffer between episodes
+        start_mask_t = tf.cast(tf.reduce_any(batch[3][:,:-2], axis=1),tf.float32)
+
+        self.optimizer_update(obs_t, obs_tp1, act_t, rew_t, done_mask_t, start_mask_t)
+
+        
+
 
     def step_env(self):
         """
@@ -225,33 +231,27 @@ class QLearner(object):
         if np.random.random() < ep:
             a = np.random.randint(self.num_actions)
         else:
-            last_obs = self.replay_buffer.encode_recent_observation()
-            outputs = self.q_model(np.expand_dims(last_obs, axis=0).astype(np.float32))
-            a = np.argmax(outputs)
+            a = self.get_next_action()
 
         # Step environment with that action, reset if `done==True`
-        if self.fruitbot:
-            # This is just to convert one of the four actions returned by the Q model to
-            # one of the 15 actions the env recognizes
-            a_env = a * 3
-        else:
-            a_env = a
-        obs, reward, done, info = self.env.step(a_env)
-
-        # Reward engineering:
-        if self.fruitbot:
-            if done:
-                reward = -3.0
-            else:
-                reward += 0.01
-
-        self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
-        self.replay_buffer.store_effect(self.replay_buffer_idx, a, reward, done)
+        
+        obs, reward, done, info = self.env.step(a)
+        
+        self.replay_buffer.add_batch((\
+            np.array(self.last_obs,dtype=np.uint8), 
+            np.array(a,            dtype=np.int32), 
+            np.array(reward,       dtype=np.float32), 
+            np.array(done,         dtype=np.bool)       ))
+        
         if done:
             obs = self.env.reset()
-            obs = obs # why is this line here lol
+            self.reset_expl_observations(obs)
+        
+        self.add_expl_observation(obs)
+        
 
         self.last_obs = obs
+
 
     def update_model(self):
         """
@@ -260,18 +260,27 @@ class QLearner(object):
         Only done if the replay buffer has enough samples
         """
         if (self.t > self.learning_starts and
-                self.t % self.learning_freq == 0 and
-                self.replay_buffer.can_sample(self.batch_size)):
+                self.t % self.learning_freq == 0):
 
-            obs_batch, act_batch, rew_batch, next_obs_batch, done_mask_batch = self.replay_buffer.sample(self.batch_size)
+            # obs_batch, act_batch, rew_batch, next_obs_batch, done_mask_batch = self.replay_buffer.sample(self.batch_size)
 
-            self.optimizer_update(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
+            # print('here')
+
+            # with tf.GradientTape() as tape:
+            #     error = self.error(obs_batch.astype(np.float32),
+            #                        next_obs_batch.astype(np.float32),
+            #                        act_batch,
+            #                        rew_batch.astype(np.float32),
+            #                        done_mask_batch)
+            # grad = tape.gradient(error, self.q_model.trainable_variables)
+            # self.optimizer.apply_gradients(zip(grad, self.q_model.trainable_variables))
+            #
+            # self.optimizer_update(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
             
+            self.opt_update_from_replay()
+
             if self.num_param_updates % self.target_update_freq == 0:
                 self.q_model_target.set_weights(self.q_model.get_weights())
-
-            if self.save_freq and self.num_param_updates % self.save_freq == 0:
-                self.save(str(self.num_param_updates))
 
             self.num_param_updates += 1
 
@@ -302,13 +311,10 @@ class QLearner(object):
             logz.log_tabular("Elapsed_Time_Hours", hours)
             logz.dump_tabular()
 
-    def save(self, strr):
-        self.q_model.save(os.path.join(self.logdir, 'model_%s.h5' % strr))
-
 
 def learn(*args, **kwargs):
     alg = QLearner(*args, **kwargs)
-
+    #QLearner.update_model = tf.function(QLearner.update_model)
     while True:
         alg.step_env()
         # The environment should have been advanced one step (and reset if done
@@ -317,5 +323,4 @@ def learn(*args, **kwargs):
         alg.log_progress()
         if alg.t > alg.max_steps:
             print("\nt = {} exceeds max_steps = {}".format(alg.t, alg.max_steps))
-            alg.save('final')
             sys.exit()
