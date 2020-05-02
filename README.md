@@ -24,3 +24,14 @@ Fruitbot:
 Cartpole:
 
 `python3 test_dqn.py CartPole-v0 --seed 42069 --num_tests 5 --load_loc [MODEL FILE LOC] --render`
+
+## Playing:
+`python3 -m procgen.interactive --env-name fruitbot --distribution-mode easy`
+
+# Sources:
+
+Rainbow DQN: https://arxiv.org/pdf/1710.02298.pdf
+
+Dist DQN: 
+* https://arxiv.org/pdf/1707.06887.pdf
+* https://flyyufelix.github.io/2017/10/24/distributional-bellman.html

@@ -23,6 +23,8 @@ def test_model(env, model, num_tests, fruitbot, render):
                 obs = obs / 255.0
             outputs = model(np.expand_dims(obs, axis=0).astype(np.float32))
             a = np.argmax(outputs)
+            if fruitbot:
+                a = a * 3
             obs, reward, done, info = env.step(a)
 
             if render:

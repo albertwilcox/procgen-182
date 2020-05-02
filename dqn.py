@@ -33,8 +33,11 @@ class QLearner(object):
                  logdir=None,
                  max_steps=2e8,
                  fruitbot=False,
+                 dist_param=0,
+                 dist_v_min=0,
+                 dist_v_max=0,
                  load_from=None,
-                 save_every=None):
+                 save_every=None,):
         """Run Deep Q-learning algorithm.
 
         You can specify your own convnet using `q_func`.
@@ -83,16 +86,28 @@ class QLearner(object):
         # assert type(env.observation_space) == gym.spaces.Box
         # assert type(env.action_space) == gym.spaces.Discrete
 
+        # Training params
         self.max_steps = int(max_steps)
         self.target_update_freq = target_update_freq
         self.batch_size = batch_size
         self.learning_freq = learning_freq
         self.learning_starts = learning_starts
         self.exploration = exploration
+        self.env = env
+
+        # Model params
         self.double_q = double_q
         self.gamma = gamma
-        self.env = env
         self.fruitbot = fruitbot
+
+        # Distributional DQN specific parameters
+        if dist_param:
+            self.dist_param = dist_param
+            self.dist_v_min = dist_v_min
+            self.dist_v_max = dist_v_max
+            self.dist_delta = (self.dist_v_max - self.dist_v_min) / self.dist_param
+
+        # Misc Params
         self.save_freq = save_every
         self.logdir = logdir
 
@@ -102,7 +117,10 @@ class QLearner(object):
         else:
             input_shape = self.env.observation_space.shape
 
-        self.num_actions = self.env.action_space.n
+        if fruitbot:
+            self.num_actions = 4
+        else:
+            self.num_actions = self.env.action_space.n
 
         if load_from:
             self.q_model = tf.keras.models.load_model(load_from)
@@ -133,24 +151,23 @@ class QLearner(object):
             self.last_obs = self.env.reset()
         self.t = 0
 
-
     @tf.function
     def error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
         if self.fruitbot:
-            obs_t = tf.cast(obs_t, tf.float32)/255.0
-            obs_tp1 = tf.cast(obs_tp1, tf.float32)/255.0
+            obs_t = tf.cast(obs_t, tf.float32) / 255.0
+            obs_tp1 = tf.cast(obs_tp1, tf.float32) / 255.0
         else:
             obs_t = tf.cast(obs_t, tf.float32)
             obs_tp1 = tf.cast(obs_tp1, tf.float32)
 
         q = self.q_model(obs_t)
-        action_q = tf.linalg.diag_part(tf.gather(q, actions_t, axis=1))
-        
+        action_q = tf.gather_nd(q, tf.expand_dims(actions_t, 1), batch_dims=1)
+
         q_target = self.q_model_target(obs_tp1)
         if self.double_q:
             q_future = self.q_model(obs_tp1)
             target_actions = tf.math.argmax(q_future, axis=1)
-            target_action_q = tf.linalg.diag_part(tf.gather(q_target, target_actions, axis=1))
+            target_action_q = tf.gather_nd(q_target, tf.expand_dims(target_actions, 1), batch_dims=1)
         else:
             target_action_q = tf.reduce_max(q_target, axis=1)
 
@@ -160,6 +177,35 @@ class QLearner(object):
         total_error = tf.reduce_mean(huber_loss(target - action_q))
 
         return total_error
+
+    @tf.function
+    def dist_error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
+        """
+        Error for a distributional DQN
+        """
+        if self.fruitbot:
+            obs_t = tf.cast(obs_t, tf.float32)/255.0
+            obs_tp1 = tf.cast(obs_tp1, tf.float32)/255.0
+        else:
+            obs_t = tf.cast(obs_t, tf.float32)
+            obs_tp1 = tf.cast(obs_tp1, tf.float32)
+
+        z_dist = self.q_model(obs_t) # shape (batch, num_actions, dist_param)
+        action_z_dist = tf.gather_nd(z_dist, tf.expand_dims(actions_t, 1), batch_dims=1) # shape (batch, dist_param)
+
+        z_dist_target = self.q_model_target(obs_tp1)
+        if self.double_q:
+            pass
+        else:
+            multiplier = tf.range(self.dist_param) * self.dist_delta # shape (dist_param,)
+            q = tf.reduce_sum(z_dist_target * multiplier, axis=2) # shape (batch, num_actions)
+            actions = tf.math.argmax(q, axis=1) # shape (batch,)
+            action_z_dist_target = tf.gather_nd(z_dist_target, tf.expand_dims(actions, 1), batch_dims=1) # shape (batch, dist_param)
+
+        # Project t+1 predictions for comparison
+
+
+
 
     @tf.function
     def optimizer_update(self, obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch):
@@ -184,8 +230,21 @@ class QLearner(object):
             a = np.argmax(outputs)
 
         # Step environment with that action, reset if `done==True`
-        
-        obs, reward, done, info = self.env.step(a)
+        if self.fruitbot:
+            # This is just to convert one of the four actions returned by the Q model to
+            # one of the 15 actions the env recognizes
+            a_env = a * 3
+        else:
+            a_env = a
+        obs, reward, done, info = self.env.step(a_env)
+
+        # Reward engineering:
+        if self.fruitbot:
+            if done:
+                reward = -3.0
+            else:
+                reward += 0.01
+
         self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
         self.replay_buffer.store_effect(self.replay_buffer_idx, a, reward, done)
         if done:

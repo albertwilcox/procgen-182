@@ -11,7 +11,7 @@ from dqn_utils import *
 from schedulers import *
 
 
-def fruitbot_model(input_shape, num_actions) -> tf.keras.Model:
+def fruitbot_model(input_shape: tuple, num_actions: int, dist_param=0) -> tf.keras.Model:
     """
     Returns a keras model for Q learning
     """
@@ -23,11 +23,15 @@ def fruitbot_model(input_shape, num_actions) -> tf.keras.Model:
     flatten = tf.keras.layers.Flatten()
 
     fc1 = tf.keras.layers.Dense(512)
-    fc2 = tf.keras.layers.Dense(num_actions)
+    if dist_param:
+        fc2 = tf.keras.layers.Dense((num_actions, dist_param))
+    else:
+        fc2 = tf.keras.layers.Dense(num_actions)
 
     return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2])
 
-def cartpole_model(input_shape, num_actions):
+
+def cartpole_model(input_shape: tuple, num_actions: int, dist_param=0) -> tf.keras.Model:
     """
     For CartPole we'll use a smaller network.
     """
