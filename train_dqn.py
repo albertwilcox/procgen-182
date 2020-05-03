@@ -7,7 +7,7 @@ import tensorflow.keras.layers as layers
 import dqn
 import gym
 from gym import wrappers
-from dqn_utils import *
+from utils import *
 from schedulers import *
 
 
@@ -46,7 +46,7 @@ def learn(env, args):
     if args.env == 'procgen:procgen-fruitbot-v0':
         optimizer = {
             'type': tf.keras.optimizers.Adam,
-            'learning_rate': 1e-4,
+            'learning_rate': 2.5e-4,
             'grad_norm_clipping': 10
         }
 
@@ -67,12 +67,13 @@ def learn(env, args):
             optimizer_params=optimizer,
             exploration=exploration_schedule,
             replay_buffer_size=100000,
-            batch_size=32,
+            batch_size=512,
             gamma=0.99,
             learning_starts=50000,
             learning_freq=4,
             frame_history_len=4,
             target_update_freq=10000,
+            multistep_len=3 if args.multistep else 1,
             double_q=args.double_q,
             logdir=args.logdir,
             max_steps=args.num_steps,
@@ -111,6 +112,7 @@ def learn(env, args):
             learning_freq=4,
             frame_history_len=1,
             target_update_freq=500,
+            multistep_len=3 if args.multistep else 1,
             double_q=args.double_q,
             logdir=args.logdir,
             max_steps=args.num_steps,
@@ -153,6 +155,7 @@ if __name__ == "__main__":
     parser.add_argument('--double_q', action='store_true', default=False)
     parser.add_argument('--load_from', type=int, default=None)
     parser.add_argument('--save_freq', type=int, default=None)
+    parser.add_argument('--multistep', action='store_true', default=False)
     args = parser.parse_args()
 
     assert args.env in ['procgen:procgen-fruitbot-v0', 'CartPole-v0']

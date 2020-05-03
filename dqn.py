@@ -11,7 +11,7 @@ import logz
 import tensorflow as tf
 from replay_buffer import *
 from collections import namedtuple
-from dqn_utils import *
+from utils import *
 from replay_buffer import ReplayBuffer
 
 
@@ -29,6 +29,7 @@ class QLearner(object):
                  learning_freq,
                  frame_history_len,
                  target_update_freq,
+                 multistep_len=1,
                  double_q=True,
                  logdir=None,
                  max_steps=2e8,
@@ -37,7 +38,7 @@ class QLearner(object):
                  dist_v_min=0,
                  dist_v_max=0,
                  load_from=None,
-                 save_every=None,):
+                 save_every=None, ):
         """Run Deep Q-learning algorithm.
 
         You can specify your own convnet using `q_func`.
@@ -110,6 +111,7 @@ class QLearner(object):
         # Misc Params
         self.save_freq = save_every
         self.logdir = logdir
+        self.multistep_len = multistep_len
 
         if fruitbot:
             img_h, img_w, img_c = self.env.observation_space.shape
@@ -151,7 +153,6 @@ class QLearner(object):
             self.last_obs = self.env.reset()
         self.t = 0
 
-        self.multi_step_len = 3
 
     @tf.function
     def error(self, obs_t, obs_tp1, actions_t, rew_t, done_mask_t):
@@ -173,7 +174,7 @@ class QLearner(object):
         else:
             target_action_q = tf.reduce_max(q_target, axis=1)
 
-        target = rew_t + (1 - done_mask_t) * (self.gamma**self.multi_step_len) * target_action_q
+        target = rew_t + (1 - done_mask_t) * (self.gamma ** self.multistep_len) * target_action_q
         tf.stop_gradient(target)
 
         total_error = tf.reduce_mean(huber_loss(target - action_q))
@@ -214,8 +215,6 @@ class QLearner(object):
         projections = projections / self.dist_delta
         targets = tf.zeros((self.batch_size, self.dist_param))
 
-
-
     @tf.function
     def optimizer_update(self, obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch):
         with tf.GradientTape() as tape:
@@ -250,13 +249,13 @@ class QLearner(object):
         # Reward engineering:
         if self.fruitbot:
             if done:
-                reward = -3.0
+                reward = -10.0
             else:
-                reward += 0.01
+                reward += 0.1
 
         self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
         self.replay_buffer.store_effect(self.replay_buffer_idx, a, reward, done)
-        self.replay_buffer.set_recent_multistep_reward(self.multi_step_len,self.gamma)
+        self.replay_buffer.set_recent_multistep_reward(self.multistep_len, self.gamma)
         if done:
             obs = self.env.reset()
             obs = obs # why is this line here lol
@@ -273,7 +272,7 @@ class QLearner(object):
                 self.t % self.learning_freq == 0 and
                 self.replay_buffer.can_sample(self.batch_size)):
 
-            obs_batch, act_batch, rew_batch, next_obs_batch, done_mask_batch = self.replay_buffer.sample(self.batch_size, self.multi_step_len)
+            obs_batch, act_batch, rew_batch, next_obs_batch, done_mask_batch = self.replay_buffer.sample(self.batch_size, self.multistep_len)
 
             self.optimizer_update(obs_batch, next_obs_batch, act_batch, rew_batch, done_mask_batch)
             
@@ -288,7 +287,6 @@ class QLearner(object):
         self.t += 1
 
     def log_progress(self):
-        # TODO: DO we use this or use our own thing?
         episode_rewards = get_wrapper_by_name(self.env, "Monitor").get_episode_rewards()
 
         if len(episode_rewards) > 0:
