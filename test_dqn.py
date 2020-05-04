@@ -31,6 +31,7 @@ def test_model(env, model, num_tests, fruitbot, render):
             # print(outputs)
             # print('\n\n')
             a = np.argmax(outputs)
+            # a = env.action_space.sample()
             if fruitbot:
                 a = a * 3
             obs, reward, done, info = env.step(a)

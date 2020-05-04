@@ -1,9 +1,11 @@
 """Utility functions that are useful for implementing DQN.
 """
 import gym
+from gym import wrappers
 import tensorflow as tf
 import numpy as np
 import random
+import os
 
 
 def huber_loss(x, delta=1.0):
@@ -62,13 +64,27 @@ def get_wrapper_by_name(env, classname):
             raise ValueError("Couldn't find wrapper named %s"%classname)
 
 
-# ------------------------------------------------------------------------------
-# SCHEDULES
-# ------------------------------------------------------------------------------
+def get_env(args):
+    if args.env == 'procgen:procgen-fruitbot-v0':
+        env = gym.make(args.env, distribution_mode='easy')
+    else:
+        env = gym.make(args.env)
+
+    set_global_seeds(args.seed)
+    env.seed(args.seed)
+    expt_dir = os.path.join(args.logdir, "gym")
+    env = wrappers.Monitor(env, expt_dir, force=True, video_callable=False)
+    return env
 
 
-# ------------------------------------------------------------------------------
-# REPLAY BUFFER
-# ------------------------------------------------------------------------------
+def set_global_seeds(i):
+    try:
+        import tensorflow as tf
+    except ImportError:
+        pass
+    else:
+        tf.random.set_seed(i)
+    np.random.seed(i)
+    random.seed(i)
 
 

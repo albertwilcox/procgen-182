@@ -123,30 +123,6 @@ def learn(env, args):
         env.close()
 
 
-def set_global_seeds(i):
-    try:
-        import tensorflow as tf
-    except ImportError:
-        pass
-    else:
-        tf.random.set_seed(i)
-    np.random.seed(i)
-    random.seed(i)
-
-
-def get_env(args):
-    if args.env == 'procgen:procgen-fruitbot-v0':
-        env = gym.make(args.env, distribution_mode='easy')
-    else:
-        env = gym.make(args.env)
-
-    set_global_seeds(args.seed)
-    env.seed(args.seed)
-    expt_dir = os.path.join(args.logdir, "gym")
-    env = wrappers.Monitor(env, expt_dir, force=True, video_callable=False)
-    return env
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('env', type=str)
