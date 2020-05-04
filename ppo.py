@@ -19,7 +19,9 @@ class PPOLearner(object):
                  steps_per_epoch=4000,
                  epochs=50,
                  policy_iters=80,
+                 policy_batch_size=32,
                  value_iters=80,
+                 value_batch_size=32,
                  adv_lambda=0.95,
                  save_freq=5,
                  fruitbot=True,
@@ -63,11 +65,14 @@ class PPOLearner(object):
         """
 
         self.env = env
+        self.fruitbot = fruitbot
 
         self.steps_per_epoch = steps_per_epoch
-        self.eopchs = epochs
+        self.epochs = epochs
         self.policy_iters = policy_iters
         self.value_iters = value_iters
+        self.value_batch_size = value_batch_size
+        self.policy_batch_size = policy_batch_size
 
         self.clip_epsilon = clip_epsilon
         self.adv_lambda = adv_lambda
@@ -94,95 +99,170 @@ class PPOLearner(object):
         print(self.policy_func.summary())
         print(self.value_func.summary())
 
+        # TODO: decide if this should be the way to optimize, I think it should
         opt = optimizer_params.get('type', tf.keras.optimizers.Adam)
         grad_norm_clipping = optimizer_params.get('grad_norm_clipping', 10)
         self.policy_optimizer = opt(learning_rate=policy_lr, clipnorm=grad_norm_clipping)
         self.value_optimizer = opt(learning_rate=value_lr, clipnorm=grad_norm_clipping)
 
-        self.num_param_updates = 0
         self.mean_episode_reward = -float('nan')
         self.std_episode_reward = -float('nan')
         self.best_mean_episode_reward = -float('inf')
-        self.log_every_n_steps = 10000 if fruitbot else 1000
+        self.log_every_n_epochs = 1
         self.start_time = time.time()
-        self.t = 0
+        self.epoch = 0
 
-    def sample_trajectories(self, env):
+    def sample_trajectories(self):
         """
         Collect paths until we have enough timesteps, as determined by the
         length of all paths collected in this batch.
         """
 
         def sample_trajectory():
-            obs = env.reset()
+            obs = self.env.reset()
             observations, actions, rewards = [], [], []
             steps = 0
             while True:
+                if self.fruitbot:
+                    obs = obs / 255.0
+
                 observations.append(obs)
                 action_probs = self.policy_func(np.expand_dims(obs, axis=0))
                 action_probs = action_probs[0]
-                action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
-                obs, rew, done, _ = env.step(action)
+                action = np.random.choice(np.arange(len(action_probs)), p=action_probs.numpy())
+                obs, rew, done, _ = self.env.step(action)
                 actions.append(action)
                 rewards.append(rew)
                 steps += 1
                 if done:
                     break
-            path = {"observation": np.array(observations, dtype=np.float32),
+            traj = {"state": np.array(observations, dtype=np.float32),
                     "reward": np.array(rewards, dtype=np.float32),
-                    "action": np.array(actions, dtype=np.int8)}
-            return path
-
-        def pathlength(path):
-            return len(path["reward"])
+                    "action": np.array(actions, dtype=np.int32),
+                    't': len(actions)}
+            return traj
 
         timesteps_this_batch = 0
-        paths = []
+        trajectories = []
         while True:
-            path = sample_trajectory()
-            paths.append(path)
-            timesteps_this_batch += pathlength(path)
+            traj = sample_trajectory()
+            trajectories.append(traj)
+            timesteps_this_batch += traj['t']
             if timesteps_this_batch > self.steps_per_epoch:
                 break
-        return paths, timesteps_this_batch
+        return trajectories, timesteps_this_batch
 
-    def reward_to_go(self, paths):
-        for path in paths:
-            rewards = path['reward']
+    def reward_to_go(self, trajectories):
+        """
+        Calculate reward to go for each state based on a list of trajectories
+
+        Returns a list of ndarrays of reward to go for each trajectory
+        """
+        out = []
+        for traj in trajectories:
+            rewards = traj['reward']
             t = len(rewards)
             ran = np.arange(t)
-            exponents = np.triu(np.tile(ran, t).reshape((t, t)) - ran.reshape((t, 1)))
-            multipliers = self.gamma ** exponents
-            path['reward_to_go'] = np.sum(rewards * multipliers, axis=1)
+            exponents = np.tile(ran, t).reshape((t, t)) - ran.reshape((t, 1))
+            multipliers = np.triu(self.gamma ** exponents)
+            out.append(np.sum(rewards * multipliers, axis=1))
+        return out
 
-    def policy_loss(self, paths, moving_policy_func, total_timesteps):
-        loss = 0
-        for path in paths:
-            actions = path['action']
-            states = path['observation']
-            rewards = path['reward']
 
-            probs_moving = moving_policy_func(states)
-            probs_stationary = self.policy_func(states)
-            quotients = probs_moving / probs_stationary
-            quotient = tf.gather_nd(quotients, tf.expand_dims(actions, 1), batch_dims=1)
+    def advantages(self, trajectories):
+        """
+        Compute advantage updates as detailed on page 5 of https://arxiv.org/pdf/1707.06347.pdf
 
-            adv = self.advantage(states, rewards)
-            clipper = self.clip(quotient, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
+        Return a list of ndarrays holding advantages at each state
+        """
+        out = []
+        for traj in trajectories:
+            values = self.value_func(traj['state'])
+            deltas = traj['reward'][:-1] + self.gamma * values[1:] - values[:-1]
+            t = traj['t'] - 1
+            ran = tf.range(t)
+            broadcasted = tf.broadcast_to(ran, (t, t))
+            exponents = broadcasted - tf.transpose(broadcasted)
+            multipliers = tf.linalg.band_part((self.gamma * self.adv_lambda) ** tf.cast(exponents, tf.float32), 0, -1)
+            out.append(tf.reduce_sum(multipliers * deltas, axis=1))
+            out.append([0])
+        return out
 
-            val = tf.math.minimum(quotient * adv, clipper * adv)
-            loss -= val / total_timesteps
-        return loss
+    # @tf.function
+    def policy_loss(self, states, actions, advantages, moving_policy_func):
+        """
+        Return policy function loss for a batch of size self.policy_batch_size
+        """
+        probs_moving = moving_policy_func(states)
+        probs_stationary = self.policy_func(states)
+        quotients = probs_moving / probs_stationary
+        quotient = tf.gather_nd(quotients, tf.expand_dims(actions, 1), batch_dims=1)
 
-    def advantage(self, states, rewards):
-        values = self.value_func(states)
-        deltas = rewards[:-1] + self.gamma * values[1:] - values[:-1]
-        # TODO: finish implementing this with the same crazy trick used for reward to go, but in tensorflow
-        return 0
+        clipper = self.clip(quotient, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
 
-    # TODO: fitting the value estimator with standard regression on reward-to-go
+        val = tf.math.minimum(quotient * advantages, clipper * advantages)
+        return -1 * val / self.policy_batch_size
 
-    # TODO: update function for policy net
+    def update_value(self, dataset):
+
+        def value_step(states, reward_to_go):
+            with tf.GradientTape() as tape:
+                pred = self.value_func(states)
+                loss = tf.keras.losses.MSE(reward_to_go, pred)
+            gradients = tape.gradient(loss, self.value_func.trainable_variables)
+            self.value_optimizer.apply_gradients(zip(gradients, self.value_func.trainable_variables))
+
+        it = 0
+        while it < self.value_iters:
+            for batch in dataset:
+                it += 1
+                if it > self.value_iters:
+                    break
+
+                value_step(*batch)
+
+    def update_policy(self, dataset):
+
+        @tf.function
+        def policy_step(states_b, actions_b, advantages_b):
+            with tf.GradientTape() as tape:
+                loss = self.policy_loss(states_b, actions_b, advantages_b, moving_policy_func)
+            gradients = tape.gradient(loss, moving_policy_func.trainable_variables)
+            self.policy_optimizer.apply_gradients(zip(gradients, moving_policy_func.trainable_variables))
+
+        moving_policy_func = tf.keras.models.clone_model(self.policy_func)
+        moving_policy_func.set_weights(self.policy_func.get_weights())
+
+        it = 0
+        while it < self.policy_iters:
+            for batch in dataset:
+                it += 1
+                if it > self.value_iters:
+                    break
+
+                policy_step(*batch)
+
+        self.policy_func.set_weights(moving_policy_func.get_weights())
+
+    def update(self, trajectories, total_timesteps):
+        reward_to_go = np.concatenate(self.reward_to_go(trajectories)).astype(np.float32)
+        advantages = np.concatenate(self.advantages(trajectories)).astype(np.float32)
+        states = np.concatenate([traj['state'] for traj in trajectories])
+        actions = np.concatenate([traj['action'] for traj in trajectories])
+
+        ds_size_policy = total_timesteps // self.policy_batch_size * self.policy_batch_size
+        ds_size_value = total_timesteps // self.value_batch_size * self.value_batch_size
+        ds_policy = tf.data.Dataset.from_tensor_slices((states, actions, advantages))
+        ds_policy = ds_policy.shuffle(ds_size_policy).batch(self.policy_batch_size)
+        ds_value = tf.data.Dataset.from_tensor_slices((states, reward_to_go))
+        ds_value = ds_value.shuffle(ds_size_value).batch(self.value_batch_size)
+
+        self.update_policy(ds_policy)
+        self.update_value(ds_value)
+
+        self.epoch += 1
+        if self.epoch % self.save_freq == 0:
+            self.save(str(self.epoch))
 
     @tf.function
     def clip(self, x, a, b):
@@ -201,20 +281,30 @@ class PPOLearner(object):
                 max(self.best_mean_episode_reward, self.mean_episode_reward)
 
         # See the `log.txt` file for where these statistics are stored.
-        if self.t % self.log_every_n_steps == 0:
+        if self.epoch % self.log_every_n_epochs == 0:
             # lr = self.optimizer_spec.lr_schedule.value(self.t)
             hours = (time.time() - self.start_time) / (60. * 60.)
-            logz.log_tabular("Steps", self.t)
+            logz.log_tabular("Epoch", self.epoch)
             logz.log_tabular("Avg_Last_100_Episodes", self.mean_episode_reward)
             logz.log_tabular("Std_Last_100_Episodes", self.std_episode_reward)
             logz.log_tabular("Best_Avg_100_Episodes", self.best_mean_episode_reward)
             logz.log_tabular("Num_Episodes", len(episode_rewards))
-            logz.log_tabular("Exploration_Epsilon", self.exploration.value(self.t))
+            # logz.log_tabular("Exploration_Epsilon", self.exploration.value(self.t))
             # logz.log_tabular("Adam_Learning_Rate", lr)
             logz.log_tabular("Elapsed_Time_Hours", hours)
             logz.dump_tabular()
 
+    def save(self, strr):
+        self.policy_func.save(os.path.join(self.logdir, 'policy_%s.h5' % strr))
+        self.value_func.save(os.path.join(self.logdir, 'value_%s.h5' % strr))
+
+
 def learn(*args, **kwargs):
     alg = PPOLearner(*args, **kwargs)
 
+    for _ in range(alg.epochs):
+        trajectories, total_timesteps = alg.sample_trajectories()
+        alg.update(trajectories, total_timesteps)
+        alg.log_progress()
 
+    alg.save('final')
