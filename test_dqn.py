@@ -20,17 +20,17 @@ def test_model(env, model, num_tests, fruitbot, render):
         total_reward = 0
         last_obs = [np.zeros(env.observation_space.shape) for _ in range(4)]
         while not done:
-            if fruitbot:
-                obs = obs / 255.0
+            if fruitbot and False:
+                obs = obs / 127.5 - 1
                 last_obs = last_obs[1:] + [obs]
                 feed = np.stack(last_obs, axis=3).reshape((64, 64, 12))
             else:
-                feed = obs
+                feed = obs / 127.5 - 1
             # print(feed.shape)
             outputs = model(np.expand_dims(feed, axis=0).astype(np.float32))
             # print(outputs)
             # print('\n\n')
-            a = np.argmax(outputs)
+            a = np.argmax(outputs[0])
             # a = env.action_space.sample()
             if fruitbot:
                 a = a * 3

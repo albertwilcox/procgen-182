@@ -13,6 +13,8 @@ class PPOLearner(object):
                  logdir,
                  optimizer_params={},
                  gamma=0.999,
+                 adv_lambda=0.95,
+                 entropy_coef=0.01,
                  clip_epsilon=0.2,
                  policy_lr=3e-4,
                  value_lr=1e-3,
@@ -22,7 +24,6 @@ class PPOLearner(object):
                  policy_batch_size=32,
                  value_iters=80,
                  value_batch_size=32,
-                 adv_lambda=0.95,
                  save_freq=5,
                  fruitbot=True,
                  load_from=None
@@ -77,6 +78,7 @@ class PPOLearner(object):
         self.clip_epsilon = clip_epsilon
         self.adv_lambda = adv_lambda
         self.gamma = gamma
+        self.entropy_coef = entropy_coef
 
         # Misc Params
         self.save_freq = save_freq
@@ -124,13 +126,34 @@ class PPOLearner(object):
             steps = 0
             while True:
                 if self.fruitbot:
-                    obs = obs / 255.0
+                    obs = obs / 127.5 - 1
 
                 observations.append(obs)
                 action_probs = self.policy_func(np.expand_dims(obs, axis=0))
                 action_probs = action_probs[0]
                 action = np.random.choice(np.arange(len(action_probs)), p=action_probs.numpy())
-                obs, rew, done, _ = self.env.step(action)
+
+                if self.fruitbot:
+                    a_env = action * 3
+                else:
+                    a_env = action
+
+                obs, rew, done, _ = self.env.step(a_env)
+
+                # Reward engineering:
+                if self.fruitbot:
+                    mode = 1
+                    if mode == 0:
+                        if done:
+                            rew = -10.0
+                        else:
+                            rew += 0.1
+                    if mode == 1:
+                        if done:
+                            rew = -10
+                        else:
+                            rew = 1
+
                 actions.append(action)
                 rewards.append(rew)
                 steps += 1
@@ -168,7 +191,6 @@ class PPOLearner(object):
             out.append(np.sum(rewards * multipliers, axis=1))
         return out
 
-
     def advantages(self, trajectories):
         """
         Compute advantage updates as detailed on page 5 of https://arxiv.org/pdf/1707.06347.pdf
@@ -188,7 +210,7 @@ class PPOLearner(object):
             out.append([0])
         return out
 
-    # @tf.function
+    @tf.function
     def policy_loss(self, states, actions, advantages, moving_policy_func):
         """
         Return policy function loss for a batch of size self.policy_batch_size
@@ -198,13 +220,15 @@ class PPOLearner(object):
         quotients = probs_moving / probs_stationary
         quotient = tf.gather_nd(quotients, tf.expand_dims(actions, 1), batch_dims=1)
 
-        clipper = self.clip(quotient, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
+        entropy = self.entropy(probs_moving)
 
-        val = tf.math.minimum(quotient * advantages, clipper * advantages)
-        return -1 * val / self.policy_batch_size
+        clipper = self.clip(quotient, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
+        val = tf.math.minimum(quotient * advantages, clipper * advantages) + self.entropy_coef * entropy
+        return -1 * tf.reduce_mean(val)
 
     def update_value(self, dataset):
 
+        @tf.function
         def value_step(states, reward_to_go):
             with tf.GradientTape() as tape:
                 pred = self.value_func(states)
@@ -270,6 +294,10 @@ class PPOLearner(object):
         x = tf.math.maximum(x, a)
         return x
 
+    @tf.function
+    def entropy(self, probs):
+        return tf.reduce_sum(tf.math.log(probs) * probs, axis=-1)
+
     def log_progress(self):
         episode_rewards = get_wrapper_by_name(self.env, "Monitor").get_episode_rewards()
 
@@ -301,6 +329,7 @@ class PPOLearner(object):
 
 def learn(*args, **kwargs):
     alg = PPOLearner(*args, **kwargs)
+    alg.save('start')
 
     for _ in range(alg.epochs):
         trajectories, total_timesteps = alg.sample_trajectories()

@@ -25,7 +25,7 @@ def fruitbot_policy_model(input_shape: tuple, num_actions: int) -> tf.keras.Mode
     fc1 = tf.keras.layers.Dense(512, activation='relu')
     fc2 = tf.keras.layers.Dense(num_actions, activation='softmax')
 
-    return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2])
+    return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2], name='fruitbot_policy')
 
 
 def fruitbot_value_model(input_shape: tuple) -> tf.keras.Model:
@@ -42,7 +42,7 @@ def fruitbot_value_model(input_shape: tuple) -> tf.keras.Model:
     fc1 = tf.keras.layers.Dense(512, activation='relu')
     fc2 = tf.keras.layers.Dense(1, activation='softmax')
 
-    return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2])
+    return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2], name='fruitbot_value')
 
 
 def cartpole_policy_model(input_shape: tuple, num_actions: int) -> tf.keras.Model:

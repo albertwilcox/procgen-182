@@ -15,8 +15,8 @@ if __name__ == '__main__':
     # env = wrappers.Monitor(env, 'test')
     obs = env.reset()
     while True:
-        obs, rew, done, info = env.step(env.action_space.sample())
-        # obs, rew, done, info = env.step(14)
+        # obs, rew, done, info = env.step(env.action_space.sample())
+        obs, rew, done, info = env.step(1)
         # print(env.action_space.n)
         env.render()
         time.sleep(0.01)
