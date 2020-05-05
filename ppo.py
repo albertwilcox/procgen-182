@@ -217,6 +217,9 @@ class PPOLearner(object):
         """
         probs_moving = moving_policy_func(states)
         probs_stationary = self.policy_func(states)
+
+        tf.stop_gradient(probs_stationary)
+
         quotients = probs_moving / probs_stationary
         quotient = tf.gather_nd(quotients, tf.expand_dims(actions, 1), batch_dims=1)
 
@@ -247,15 +250,15 @@ class PPOLearner(object):
 
     def update_policy(self, dataset):
 
-        @tf.function
+        moving_policy_func = tf.keras.models.clone_model(self.policy_func)
+        moving_policy_func.set_weights(self.policy_func.get_weights())
+
+        # @tf.function
         def policy_step(states_b, actions_b, advantages_b):
             with tf.GradientTape() as tape:
                 loss = self.policy_loss(states_b, actions_b, advantages_b, moving_policy_func)
             gradients = tape.gradient(loss, moving_policy_func.trainable_variables)
             self.policy_optimizer.apply_gradients(zip(gradients, moving_policy_func.trainable_variables))
-
-        moving_policy_func = tf.keras.models.clone_model(self.policy_func)
-        moving_policy_func.set_weights(self.policy_func.get_weights())
 
         it = 0
         while it < self.policy_iters:
@@ -296,7 +299,7 @@ class PPOLearner(object):
 
     @tf.function
     def entropy(self, probs):
-        return tf.reduce_sum(tf.math.log(probs) * probs, axis=-1)
+        return -1 * tf.reduce_sum(tf.math.log(probs + 1e-8) * probs, axis=-1)
 
     def log_progress(self):
         episode_rewards = get_wrapper_by_name(self.env, "Monitor").get_episode_rewards()
