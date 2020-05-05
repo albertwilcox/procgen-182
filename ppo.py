@@ -26,7 +26,8 @@ class PPOLearner(object):
                  value_batch_size=32,
                  save_freq=5,
                  fruitbot=True,
-                 load_from=None
+                 load_policy_from=None,
+                 load_value_from=None
                  ):
         """
         Initialize a PPO learner
@@ -91,12 +92,15 @@ class PPOLearner(object):
         else:
             self.num_actions = self.env.action_space.n
 
-        if load_from:
-            self.policy_func = tf.keras.models.load_model(os.path.join(load_from, 'policy.h5'), compile=False)
-            self.value_func = tf.keras.models.load_model(os.path.join(load_from, 'value.h5'), compile=False)
+        if load_policy_from and load_value_from:
+            self.policy_func = tf.keras.models.load_model(load_policy_from, compile=False)
+            self.value_func = tf.keras.models.load_model(load_value_from, compile=False)
         else:
             self.policy_func = policy_func_constructor(input_shape, self.num_actions)
             self.value_func = value_func_constructor(input_shape)
+            self.policy_func.build((None,) + input_shape)
+            self.value_func.build((None,) + input_shape)
+        self.stationary_policy_func = None
 
         print(self.policy_func.summary())
         print(self.value_func.summary())
@@ -211,16 +215,16 @@ class PPOLearner(object):
         return out
 
     @tf.function
-    def policy_loss(self, states, actions, advantages, moving_policy_func):
+    def policy_loss(self, states, actions, advantages):
         """
         Return policy function loss for a batch of size self.policy_batch_size
         """
-        probs_moving = moving_policy_func(states)
-        probs_stationary = self.policy_func(states)
+        probs_moving = self.policy_func(states)
+        probs_stationary = self.stationary_policy_func(states)
 
         tf.stop_gradient(probs_stationary)
 
-        quotients = probs_moving / probs_stationary
+        quotients = probs_moving / (probs_stationary + 1e-8)
         quotient = tf.gather_nd(quotients, tf.expand_dims(actions, 1), batch_dims=1)
 
         entropy = self.entropy(probs_moving)
@@ -250,15 +254,16 @@ class PPOLearner(object):
 
     def update_policy(self, dataset):
 
-        moving_policy_func = tf.keras.models.clone_model(self.policy_func)
-        moving_policy_func.set_weights(self.policy_func.get_weights())
+        self.stationary_policy_func = tf.keras.models.clone_model(self.policy_func)
+        self.stationary_policy_func.set_weights(self.policy_func.get_weights())
 
-        # @tf.function
+        @tf.function
         def policy_step(states_b, actions_b, advantages_b):
             with tf.GradientTape() as tape:
-                loss = self.policy_loss(states_b, actions_b, advantages_b, moving_policy_func)
-            gradients = tape.gradient(loss, moving_policy_func.trainable_variables)
-            self.policy_optimizer.apply_gradients(zip(gradients, moving_policy_func.trainable_variables))
+                loss = self.policy_loss(states_b, actions_b, advantages_b)
+            # print(loss)
+            gradients = tape.gradient(loss, self.policy_func.trainable_variables)
+            self.policy_optimizer.apply_gradients(zip(gradients, self.policy_func.trainable_variables))
 
         it = 0
         while it < self.policy_iters:
@@ -268,8 +273,6 @@ class PPOLearner(object):
                     break
 
                 policy_step(*batch)
-
-        self.policy_func.set_weights(moving_policy_func.get_weights())
 
     def update(self, trajectories, total_timesteps):
         reward_to_go = np.concatenate(self.reward_to_go(trajectories)).astype(np.float32)
@@ -326,13 +329,13 @@ class PPOLearner(object):
             logz.dump_tabular()
 
     def save(self, strr):
-        self.policy_func.save(os.path.join(self.logdir, 'policy_%s.h5' % strr))
-        self.value_func.save(os.path.join(self.logdir, 'value_%s.h5' % strr))
+        self.policy_func.save(os.path.join(self.logdir, 'policy_%s' % strr))
+        self.value_func.save(os.path.join(self.logdir, 'value_%s' % strr))
 
 
 def learn(*args, **kwargs):
     alg = PPOLearner(*args, **kwargs)
-    alg.save('start')
+    # alg.save('start')
 
     for _ in range(alg.epochs):
         trajectories, total_timesteps = alg.sample_trajectories()
