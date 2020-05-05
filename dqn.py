@@ -311,7 +311,7 @@ class QLearner(object):
             logz.dump_tabular()
 
     def save(self, strr):
-        self.q_model.save(os.path.join(self.logdir, 'model_%s.h5' % strr))
+        self.q_model.save(os.path.join(self.logdir, 'model_%s' % strr))
 
 
 def learn(*args, **kwargs):
