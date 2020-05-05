@@ -7,4 +7,5 @@ matplotlib
 opencv-python
 jupyter
 procgen
+ray
 

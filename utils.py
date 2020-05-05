@@ -2,13 +2,13 @@
 """
 import gym
 from gym import wrappers
-import tensorflow as tf
 import numpy as np
 import random
 import os
 
 
 def huber_loss(x, delta=1.0):
+    import tensorflow as tf
     """https://en.wikipedia.org/wiki/Huber_loss
     """
     return tf.where(
@@ -19,6 +19,7 @@ def huber_loss(x, delta=1.0):
 
 
 def compute_exponential_averages(variables, decay):
+    import tensorflow as tf
     """Given a list of tensorflow scalar variables create ops corresponding to
     their exponential averages.
 
@@ -42,6 +43,7 @@ def compute_exponential_averages(variables, decay):
 
 
 def minimize_and_clip(optimizer, objective, var_list, clip_val=10):
+    import tensorflow as tf
     """Minimized `objective` using `optimizer` w.r.t. variables in `var_list`
     while ensure the norm of the gradients for each variable is clipped to
     `clip_val`.
