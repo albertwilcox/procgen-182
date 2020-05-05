@@ -34,6 +34,8 @@ Cartpole:
 
 ProcGen Info: https://arxiv.org/pdf/1912.01588.pdf
 
+Reference Code: https://github.com/openai/train-procgen
+
 PPO: 
 * https://openai.com/blog/openai-baselines-ppo/
 * https://spinningup.openai.com/en/latest/algorithms/ppo.html
