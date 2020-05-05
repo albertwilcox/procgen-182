@@ -13,25 +13,23 @@ def get_env(args):
     return env
 
 
-def test_model(env, model, num_tests, fruitbot, render):
+def test_model(env, model, num_tests, fruitbot, ppo, render):
     for i in range(num_tests):
         obs = env.reset()
         done = False
         total_reward = 0
-        last_obs = [np.zeros(env.observation_space.shape) for _ in range(4)]
+        # last_obs = [np.zeros(env.observation_space.shape) for _ in range(4)]
         while not done:
-            if fruitbot and False:
+            if fruitbot:
                 obs = obs / 127.5 - 1
-                last_obs = last_obs[1:] + [obs]
-                feed = np.stack(last_obs, axis=3).reshape((64, 64, 12))
+
+            outputs = model(np.expand_dims(obs, axis=0).astype(np.float32)).numpy().squeeze()
+
+            if ppo:
+                a = np.random.choice(np.arange(outputs.size), p=outputs)
             else:
-                feed = obs / 127.5 - 1
-            # print(feed.shape)
-            outputs = model(np.expand_dims(feed, axis=0).astype(np.float32))
-            # print(outputs)
-            # print('\n\n')
-            a = np.argmax(outputs[0])
-            # a = env.action_space.sample()
+                a = np.argmax(outputs)
+
             if fruitbot:
                 a = a * 3
             obs, reward, done, info = env.step(a)
@@ -53,6 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_tests', type=int, default=4e6)
     parser.add_argument('--load_loc', type=str, default=None)
     parser.add_argument('--render', action='store_true', default=False)
+    parser.add_argument('--ppo', action='store_true', default=True)
     args = parser.parse_args()
 
     assert args.env in ['procgen:procgen-fruitbot-v0', 'CartPole-v0']
@@ -63,4 +62,4 @@ if __name__ == '__main__':
 
     env = get_env(args)
     model = tf.keras.models.load_model(args.load_loc, compile=False)
-    test_model(env, model, args.num_tests, fruitbot, args.render)
+    test_model(env, model, args.num_tests, fruitbot, args.ppo, args.render)
