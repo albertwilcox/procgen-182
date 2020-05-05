@@ -10,39 +10,55 @@ from gym import wrappers
 import ppo
 from utils import *
 from schedulers import *
-
+    
 def fruitbot_policy_model(input_shape: tuple, num_actions: int) -> tf.keras.Model:
     """
     Returns a keras model for Q learning
     """
-    conv1 = tf.keras.layers.Conv2D(32, (8, 8), 4, activation='relu',
-                                   data_format='channels_last', input_shape=input_shape)
-    conv2 = tf.keras.layers.Conv2D(64, (4, 4), 2, activation='relu', data_format='channels_last')
-    conv3 = tf.keras.layers.Conv2D(64, (3, 3), 1, activation='relu', data_format='channels_last')
+    conv1 = tf.keras.layers.Conv2D(32, (9, 9), 2, data_format='channels_last', input_shape=input_shape)
+    activation = tf.keras.layers.LeakyReLU(alpha=0.1)
+    conv2 = tf.keras.layers.Conv2D(64, (4, 4), 2, data_format='channels_last')
+    activation2 = tf.keras.layers.LeakyReLU(alpha=0.1)
+    conv3 = tf.keras.layers.Conv2D(64, (2, 2), 1, data_format='channels_last')
+    activation3 = tf.keras.layers.LeakyReLU(alpha=0.1)
+    # conv1 = tf.keras.layers.Conv2D(32, (8, 8), 4, activation='relu',
+    #                               data_format='channels_last', input_shape=input_shape)
+    # conv2 = tf.keras.layers.Conv2D(64, (4, 4), 2, activation='relu', data_format='channels_last')
+    # conv3 = tf.keras.layers.Conv2D(64, (3, 3), 1, activation='relu', data_format='channels_last')
 
     flatten = tf.keras.layers.Flatten()
 
-    fc1 = tf.keras.layers.Dense(512, activation='relu')
+    fc1 = tf.keras.layers.Dense(512)
+    # fc1 = tf.keras.layers.Dense(512, activation='relu')
+    activation4 = tf.keras.layers.LeakyReLU(alpha=0.1)
     fc2 = tf.keras.layers.Dense(num_actions, activation='softmax')
 
-    return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2], name='fruitbot_policy')
+    return tf.keras.Sequential([conv1, activation, conv2, activation2, conv3, activation3, flatten, fc1, activation4, fc2], name='fruitbot_policy')
 
 
 def fruitbot_value_model(input_shape: tuple) -> tf.keras.Model:
     """
     Returns a keras model for Q learning
     """
-    conv1 = tf.keras.layers.Conv2D(32, (8, 8), 4, activation='relu',
-                                   data_format='channels_last', input_shape=input_shape)
-    conv2 = tf.keras.layers.Conv2D(64, (4, 4), 2, activation='relu', data_format='channels_last')
-    conv3 = tf.keras.layers.Conv2D(64, (3, 3), 1, activation='relu', data_format='channels_last')
+    conv1 = tf.keras.layers.Conv2D(32, (9, 9), 2, data_format='channels_last', input_shape=input_shape)
+    activation = tf.keras.layers.LeakyReLU(alpha=0.1)
+    conv2 = tf.keras.layers.Conv2D(64, (4, 4), 2, data_format='channels_last')
+    activation2 = tf.keras.layers.LeakyReLU(alpha=0.1)
+    conv3 = tf.keras.layers.Conv2D(64, (2, 2), 1, data_format='channels_last')
+    activation3 = tf.keras.layers.LeakyReLU(alpha=0.1)
+    # conv1 = tf.keras.layers.Conv2D(32, (8, 8), 4, activation='relu',
+    #                               data_format='channels_last', input_shape=input_shape)
+    # conv2 = tf.keras.layers.Conv2D(64, (4, 4), 2, activation='relu', data_format='channels_last')
+    # conv3 = tf.keras.layers.Conv2D(64, (3, 3), 1, activation='relu', data_format='channels_last')
 
     flatten = tf.keras.layers.Flatten()
 
-    fc1 = tf.keras.layers.Dense(512, activation='relu')
+    # fc1 = tf.keras.layers.Dense(512, activation='relu')
+    fc1 = tf.keras.layers.Dense(512)
+    activation4 = tf.keras.layers.LeakyReLU(alpha=0.1)
     fc2 = tf.keras.layers.Dense(1, activation='softmax')
 
-    return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2], name='fruitbot_value')
+    return tf.keras.Sequential([conv1, activation, conv2, activation2, conv3, activation3, flatten, fc1, activation4, fc2], name='fruitbot_value')
 
 
 def cartpole_policy_model(input_shape: tuple, num_actions: int) -> tf.keras.Model:
