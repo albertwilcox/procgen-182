@@ -214,25 +214,6 @@ class PPOLearner(object):
             out.append([0])
         return out
 
-    @tf.function
-    def policy_loss(self, states, actions, advantages):
-        """
-        Return policy function loss for a batch of size self.policy_batch_size
-        """
-        probs_moving = self.policy_func(states)
-        probs_stationary = self.stationary_policy_func(states)
-
-        tf.stop_gradient(probs_stationary)
-
-        quotients = probs_moving / (probs_stationary + 1e-8)
-        quotient = tf.gather_nd(quotients, tf.expand_dims(actions, 1), batch_dims=1)
-
-        entropy = self.entropy(probs_moving)
-
-        clipper = self.clip(quotient, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
-        val = tf.math.minimum(quotient * advantages, clipper * advantages) + self.entropy_coef * entropy
-        return -1 * tf.reduce_mean(val)
-
     def update_value(self, dataset):
 
         @tf.function
@@ -258,10 +239,28 @@ class PPOLearner(object):
         self.stationary_policy_func.set_weights(self.policy_func.get_weights())
 
         @tf.function
+        def policy_loss(states_b, actions_b, advantages_b):
+            """
+            Return policy function loss for a batch of size self.policy_batch_size
+            """
+            probs_moving = self.policy_func(states_b)
+            probs_stationary = self.stationary_policy_func(states_b)
+
+            tf.stop_gradient(probs_stationary)
+
+            quotients = probs_moving / (probs_stationary + 1e-8)
+            quotient = tf.gather_nd(quotients, tf.expand_dims(actions_b, 1), batch_dims=1)
+
+            entropy = self.entropy(probs_moving)
+
+            clipper = self.clip(quotient, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
+            val = tf.math.minimum(quotient * advantages_b, clipper * advantages_b) + self.entropy_coef * entropy
+            return -1 * tf.reduce_mean(val)
+
+        @tf.function
         def policy_step(states_b, actions_b, advantages_b):
             with tf.GradientTape() as tape:
-                loss = self.policy_loss(states_b, actions_b, advantages_b)
-            # print(loss)
+                loss = policy_loss(states_b, actions_b, advantages_b)
             gradients = tape.gradient(loss, self.policy_func.trainable_variables)
             self.policy_optimizer.apply_gradients(zip(gradients, self.policy_func.trainable_variables))
 

@@ -102,7 +102,6 @@ class ImpalaModel(tf.keras.models.Model):
     #     return x
 
 
-
 def fb_p_impala(input_shape: tuple, num_actions:int) -> tf.keras.Model:
     # rb1 = ResBlock(16, input_shape)
     # rb2 = ResBlock(32)
@@ -211,8 +210,9 @@ def learn(env, args):
             policy_func_constructor,
             value_func_constructor,
             args.logdir,
+            entropy_coef=0,
             epochs=args.epochs,
-            load_from=args.load_from,
+            # load_from=args.load_from,
             save_freq=args.save_freq,
             fruitbot=False
         )
