@@ -184,10 +184,10 @@ def cartpole_value_model(input_shape: tuple) -> tf.keras.Model:
 
 def learn(env, args):
     if args.env == 'procgen:procgen-fruitbot-v0':
-        # policy_func_constructor = fb_p_impala
-        # value_func_constructor = fb_v_impala
-        policy_func_constructor = fruitbot_policy_model
-        value_func_constructor = fruitbot_value_model
+        policy_func_constructor = fb_p_impala
+        value_func_constructor = fb_v_impala
+        # policy_func_constructor = fruitbot_policy_model
+        # value_func_constructor = fruitbot_value_model
 
         ppo.learn(
             env,

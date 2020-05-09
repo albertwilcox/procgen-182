@@ -21,11 +21,11 @@ You might need to run `brew install ffmpeg`
 
 Fruitbot:
 
-`python3 test_dqn.py procgen:procgen-fruitbot-v0 --seed 42069 --num_tests 5 --load_loc [MODEL FILE LOC] --render`
+`python3 test_model.py procgen:procgen-fruitbot-v0 --seed 42069 --num_tests 5 --load_loc [MODEL FILE LOC] --render`
 
 Cartpole:
 
-`python3 test_dqn.py CartPole-v0 --seed 42069 --num_tests 5 --load_loc [MODEL FILE LOC] --render`
+`python3 test_model.py CartPole-v0 --seed 42069 --num_tests 5 --load_loc [MODEL FILE LOC] --render`
 
 ## Playing:
 `python3 -m procgen.interactive --env-name fruitbot --distribution-mode easy`
@@ -45,3 +45,5 @@ Rainbow DQN: https://arxiv.org/pdf/1710.02298.pdf
 Dist DQN: 
 * https://arxiv.org/pdf/1707.06887.pdf
 * https://flyyufelix.github.io/2017/10/24/distributional-bellman.html
+
+Network Architecture: https://arxiv.org/pdf/1802.01561.pdf

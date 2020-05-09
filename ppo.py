@@ -87,7 +87,7 @@ class PPOLearner(object):
 
         input_shape = self.env.observation_space.shape
 
-        if fruitbot:
+        if fruitbot and False:
             self.num_actions = 4
         else:
             self.num_actions = self.env.action_space.n
@@ -137,7 +137,7 @@ class PPOLearner(object):
                 action_probs = action_probs[0]
                 action = np.random.choice(np.arange(len(action_probs)), p=action_probs.numpy())
 
-                if self.fruitbot:
+                if self.fruitbot and False:
                     a_env = action * 3
                 else:
                     a_env = action
@@ -146,7 +146,7 @@ class PPOLearner(object):
 
                 # Reward engineering:
                 if self.fruitbot:
-                    mode = 1
+                    mode = 2
                     if mode == 0:
                         if done:
                             rew = -10.0
@@ -254,7 +254,7 @@ class PPOLearner(object):
             entropy = self.entropy(probs_moving)
 
             clipper = self.clip(quotient, 1 - self.clip_epsilon, 1 + self.clip_epsilon)
-            val = tf.math.minimum(quotient * advantages_b, clipper * advantages_b) + self.entropy_coef * entropy
+            val = tf.math.minimum(quotient * advantages_b, clipper * advantages_b) - self.entropy_coef * entropy
             return -1 * tf.reduce_mean(val)
 
         @tf.function

@@ -6,7 +6,7 @@ import numpy as np
 
 def get_env(args):
     if args.env == 'procgen:procgen-fruitbot-v0':
-        env = gym.make(args.env, distribution_mode='easy')
+        env = gym.make(args.env, distribution_mode='easy', num_levels=1, start_level=1)
     else:
         env = gym.make(args.env)
     env.seed(args.seed)
@@ -30,8 +30,8 @@ def test_model(env, model, num_tests, fruitbot, ppo, render):
             else:
                 a = np.argmax(outputs)
 
-            if fruitbot:
-                a = a * 3
+            # if fruitbot:
+            #     a = a * 3
             obs, reward, done, info = env.step(a)
 
             if render:
@@ -61,5 +61,5 @@ if __name__ == '__main__':
     print('random seed = {}'.format(args.seed))
 
     env = get_env(args)
-    model = tf.keras.models.load_model(args.load_loc, compile=False)
+    model = tf.keras.models.load_model(args.load_loc)
     test_model(env, model, args.num_tests, fruitbot, args.ppo, args.render)
