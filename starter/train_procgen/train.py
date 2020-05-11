@@ -30,7 +30,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='Process procgen training arguments.')
     parser.add_argument('--env_name', type=str, default='coinrun')
-    parser.add_argument('--distribution_mode', type=str, default='hard', choices=["easy", "hard", "exploration", "memory", "extreme"])
+    parser.add_argument('--distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
     parser.add_argument('--num_levels', type=int, default=0)
     parser.add_argument('--start_level', type=int, default=0)
     parser.add_argument('--test_worker_interval', type=int, default=0)
@@ -96,6 +96,7 @@ def main():
         vf_coef=0.5,
         max_grad_norm=0.5,
     )
+
 
 if __name__ == '__main__':
     main()

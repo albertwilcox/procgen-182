@@ -1,5 +1,6 @@
 __pycache__/
 data_dqn/
+data_ppo/
 test/
 Part02_Deep-Q-Networks.ipynb
 *.h5

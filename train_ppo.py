@@ -1,5 +1,5 @@
 import os, random, time, argparse, gym, sys
-import logz
+import lib.logz
 import procgen
 import numpy as np
 import tensorflow as tf
@@ -7,9 +7,9 @@ import tensorflow.keras.layers as layers
 import gym
 from gym import wrappers
 
-import ppo
-from utils import *
-from schedulers import *
+import lib.ppo
+from lib.utils import *
+from lib.schedulers import *
 
 
 class ResBlock(tf.keras.models.Model):
@@ -195,6 +195,8 @@ def learn(env, args):
             value_func_constructor,
             args.logdir,
             epochs=args.epochs,
+             policy_lr=5e-4,
+             value_lr=5e-4,
             load_policy_from=args.load_policy_from,
             load_value_from=args.load_value_from,
             save_freq=args.save_freq,

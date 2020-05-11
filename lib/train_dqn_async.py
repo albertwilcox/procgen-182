@@ -2,19 +2,19 @@ import os, random, time, argparse, gym, sys
 import lib.logz
 import procgen
 import numpy as np
-import tensorflow as tf
-import tensorflow.keras.layers as layers
-import lib.dqn
+# import dqn
 import gym
 from gym import wrappers
 from lib.utils import *
 from lib.schedulers import *
+import lib.async_train_loop
 
 
-def fruitbot_model(input_shape: tuple, num_actions: int, dist_param=0) -> tf.keras.Model:
+def fruitbot_model(input_shape: tuple, num_actions: int, dist_param=0):
     """
     Returns a keras model for Q learning
     """
+    import tensorflow as tf
     conv1 = tf.keras.layers.Conv2D(32, (8, 8), 4, activation='relu',
                                    data_format='channels_last', input_shape=input_shape)
     conv2 = tf.keras.layers.Conv2D(64, (4, 4), 2, activation='relu', data_format='channels_last')
@@ -31,7 +31,8 @@ def fruitbot_model(input_shape: tuple, num_actions: int, dist_param=0) -> tf.ker
     return tf.keras.Sequential([conv1, conv2, conv3, flatten, fc1, fc2])
 
 
-def cartpole_model(input_shape: tuple, num_actions: int, dist_param=0) -> tf.keras.Model:
+def cartpole_model(input_shape: tuple, num_actions: int, dist_param=0):
+    import tensorflow as tf
     """
     For CartPole we'll use a smaller network.
     """
@@ -42,7 +43,8 @@ def cartpole_model(input_shape: tuple, num_actions: int, dist_param=0) -> tf.ker
     return tf.keras.Sequential([fc1, fc2, fc3])
 
 
-def learn(env, args):
+def learn(args):
+    import tensorflow as tf
     if args.env == 'procgen:procgen-fruitbot-v0':
         optimizer = {
             'type': tf.keras.optimizers.Adam,
@@ -61,12 +63,15 @@ def learn(env, args):
 
         q_model_constructor = fruitbot_model
 
-        dqn.learn(
-            env=env,
+        async_train_loop.learn(
+            3,
+            env=args.env,
             q_model_constructor=q_model_constructor,
             optimizer_params=optimizer,
             exploration=exploration_schedule,
             replay_buffer_size=100000,
+            alpha=1,
+            beta=0.5,
             batch_size=512,
             gamma=0.99,
             learning_starts=50000,
@@ -81,7 +86,6 @@ def learn(env, args):
             load_from=args.load_from,
             save_every=args.save_freq
         )
-        env.close()
     elif args.env == 'CartPole-v0':
         optimizer = {
             'type': tf.keras.optimizers.Adam,
@@ -100,12 +104,15 @@ def learn(env, args):
 
         q_model_constructor = cartpole_model
 
-        dqn.learn(
-            env=env,
+        async_train_loop.learn(
+            3,
+            env=args.env,
             q_model_constructor=q_model_constructor,
             optimizer_params=optimizer,
             exploration=exploration_schedule,
             replay_buffer_size=10000,
+            alpha=0.5,
+            beta=0.5,
             batch_size=100,
             gamma=0.99,
             learning_starts=1000,
@@ -120,10 +127,34 @@ def learn(env, args):
             load_from=args.load_from,
             save_every=args.save_freq
         )
-        env.close()
+
+def set_global_seeds(i):
+    try:
+        import tensorflow as tf
+    except ImportError:
+        pass
+    else:
+        tf.random.set_seed(i)
+    np.random.seed(i)
+    random.seed(i)
+
+
+def get_env(args):
+    if args.env == 'procgen:procgen-fruitbot-v0':
+        env = gym.make(args.env, distribution_mode='easy')
+    else:
+        env = gym.make(args.env)
+
+    set_global_seeds(args.seed)
+    env.seed(args.seed)
+    expt_dir = os.path.join(args.logdir, "gym")
+    env = wrappers.Monitor(env, expt_dir, force=True, video_callable=False)
+    return env
 
 
 if __name__ == "__main__":
+    import tensorflow as tf
+
     parser = argparse.ArgumentParser()
     parser.add_argument('env', type=str)
     parser.add_argument('--seed', type=int, default=None)
@@ -133,6 +164,12 @@ if __name__ == "__main__":
     parser.add_argument('--save_freq', type=int, default=None)
     parser.add_argument('--multistep', action='store_true', default=False)
     args = parser.parse_args()
+
+
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    tf.config.experimental.set_virtual_device_configuration(
+        gpus[0],
+        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=1024)])
 
     assert args.env in ['procgen:procgen-fruitbot-v0', 'CartPole-v0']
     if args.seed is None:
@@ -149,5 +186,5 @@ if __name__ == "__main__":
     logz.configure_output_dir(logdir)
     args.logdir = logdir
 
-    env = get_env(args)
-    learn(env, args)
+    # env = get_env(args)
+    learn(args)

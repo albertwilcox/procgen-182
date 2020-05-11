@@ -6,7 +6,7 @@ import numpy as np
 
 def get_env(args):
     if args.env == 'procgen:procgen-fruitbot-v0':
-        env = gym.make(args.env, distribution_mode='easy', num_levels=1, start_level=1)
+        env = gym.make(args.env, distribution_mode='easy')
     else:
         env = gym.make(args.env)
     env.seed(args.seed)
