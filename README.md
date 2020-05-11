@@ -4,9 +4,9 @@ Creating an agent to solve ProcGen tasks for CS 182 at Berkeley.
 
 https://openai.com/blog/procgen-benchmark/
 
-## To run:
+## To run our code:
 
-## Training
+### Training
 Fruitbot:
 
 `python3 train_dqn.py procgen:procgen-fruitbot-v0 --num_steps 600000 --seed 42069 --double_q --multistep`
@@ -17,7 +17,7 @@ CartPole:
 
 You might need to run `brew install ffmpeg`
 
-## Testing:
+### Testing:
 
 Fruitbot:
 
@@ -27,8 +27,20 @@ Cartpole:
 
 `python3 test_model.py CartPole-v0 --seed 42069 --num_tests 5 --load_loc [MODEL FILE LOC] --render`
 
-## Playing:
+### Playing:
 `python3 -m procgen.interactive --env-name fruitbot --distribution-mode easy`
+
+## To Run Starter code:
+
+### Installation
+```
+conda env update --name train-procgen --file train-procgen/environment.yml
+conda activate train-procgen
+pip install https://github.com/openai/baselines/archive/9ee399f5b20cd70ac0a871927a6cf043b478193f.zip
+```
+
+### Running
+`insert code here`
 
 ## Sources:
 
