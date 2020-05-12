@@ -55,6 +55,28 @@ def make_venv(name, start_level, num_levels=None, num_envs=16, mode='easy'):
 
     return venv
 
+def plot_reward_training(train_files, test_files, save_dir, title='', x_mult=1):
+    if type(train_files) == str:
+        train_files = [train_files]
+    if type(test_files) == str:
+        test_files = [test_files]
+
+    train_data = np.array([np.loadtxt(f) for f in train_files])
+    test_data = np.array([np.loadtxt(f) for f in test_files])
+
+    plt.figure()
+    plt.title(title)
+    plt.ylabel('Avg. Reward')
+    plt.xlabel('Training timesteps')
+    x = np.arange(len(train_data)) * x_mult
+    y_train = np.mean(train_data, axis=(0,2)).squeeze()
+    y_test = np.mean(test_data, axis=(0,2)).squeeze()
+    plt.plot(x, y_train, label='Training Levels', c='g')
+    plt.plot(x, y_test, label='Testing Levels', c='b')
+    plt.legend()
+    plt.savefig(os.path.join(save_dir, 'graph.pdf'))
+    plt.savefig(os.path.join(save_dir, 'graph_im.png'))
+
 def main():
     ent_coef = .01
     nsteps = 256
