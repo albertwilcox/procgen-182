@@ -39,7 +39,7 @@ def test_model(venv, model, num_per_model):
             maybeepinfo = info.get('episode')
             if maybeepinfo:
                 ep_rewards.append(maybeepinfo['r'])
-                print(len(ep_rewards))
+                # print(len(ep_rewards))
     return ep_rewards[:num_per_model]
 
 def make_venv(name, start_level, num_levels=None, num_envs=16, mode='easy'):
@@ -69,6 +69,7 @@ def main():
     parser.add_argument('--num_envs', type=int, default=64)
     parser.add_argument('--num_per_model', type=int, default=128)
     parser.add_argument('--eval_freq', type=int, default=10)
+    parser.add_argument('--eval_stop', type=int, default=10_000_000)
     parser.add_argument('--figure_title', type=str, default='')
     parser.add_argument('--model_dir', type=str, default='tmp/procgen/checkpoints')
     parser.add_argument('--save_dir', type=str, default='outputs')
@@ -102,9 +103,9 @@ def main():
     model_files = [os.path.join(args.model_dir, file) for file in model_files]
     train_data = []
     test_data = []
+    eval_freq = args.eval_freq
     for i, file in list(enumerate(model_files)):
-        eval_freq = 30
-        if i % eval_freq == 0 and i <= 30:
+        if i % eval_freq == 0 and i <= args.eval_stop:
             print(file)
 
             model.load(file)
@@ -122,7 +123,7 @@ def main():
     test_data = np.array(test_data)
 
     now = datetime.datetime.now()
-    save_dir = os.path.join(args.save_dir, now.strftime("%m%d%H%M%S"))
+    save_dir = os.path.join(args.save_dir, now.strftime("%m-%d-%H-%M-%S"))
     os.mkdir(save_dir)
 
     np.savetxt(os.path.join(save_dir, 'train_data.csv'), train_data, delimiter=',')
