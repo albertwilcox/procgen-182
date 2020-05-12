@@ -29,7 +29,7 @@ def main():
     use_vf_clipping = True
 
     parser = argparse.ArgumentParser(description='Process procgen training arguments.')
-    parser.add_argument('--env_name', type=str, default='coinrun')
+    parser.add_argument('--env_name', type=str, default='fruitbot')
     parser.add_argument('--distribution_mode', type=str, default='easy', choices=["easy", "hard", "exploration", "memory", "extreme"])
     parser.add_argument('--num_levels', type=int, default=0)
     parser.add_argument('--start_level', type=int, default=0)
@@ -64,7 +64,7 @@ def main():
 
     venv = VecNormalize(venv=venv, ob=False)
 
-    venv_eval = ProcgenEnv(num_envs=num_envs, env_name=args.env_name, start_level=500,distribution_mode=args.distribution_mode)
+    venv_eval = ProcgenEnv(num_envs=num_envs, env_name=args.env_name, start_level=500, distribution_mode=args.distribution_mode)
     venv_eval = VecExtractDictObs(venv_eval, "rgb")
 
     venv_eval = VecMonitor(
