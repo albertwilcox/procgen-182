@@ -16,7 +16,7 @@ import argparse
 LOG_DIR = '/tmp/procgen'
 
 def main():
-    num_envs = 64
+    num_envs = 16
     learning_rate = 5e-4
     ent_coef = .01
     gamma = .999
@@ -64,6 +64,15 @@ def main():
 
     venv = VecNormalize(venv=venv, ob=False)
 
+    venv_eval = ProcgenEnv(num_envs=num_envs, env_name=args.env_name, start_level=500,distribution_mode=args.distribution_mode)
+    venv_eval = VecExtractDictObs(venv_eval, "rgb")
+
+    venv_eval = VecMonitor(
+        venv=venv_eval, filename=None, keep_buf=100,
+    )
+
+    venv_eval = VecNormalize(venv=venv_eval, ob=False)
+
     logger.info("creating tf session")
     setup_mpi_gpus()
     config = tf.ConfigProto()
@@ -76,6 +85,7 @@ def main():
     logger.info("training")
     ppo2.learn(
         env=venv,
+        eval_env=venv_eval,
         network=conv_fn,
         total_timesteps=timesteps_per_proc,
         save_interval=0,
