@@ -1,7 +1,7 @@
 import tensorflow as tf
 from baselines.common.policies import build_policy
 from baselines.ppo2 import ppo2
-from baselines.common.models import build_impala_cnn
+from starter_models import *
 from baselines.common.mpi_util import setup_mpi_gpus
 from baselines.ppo2.model import Model
 from procgen import ProcgenEnv
@@ -24,22 +24,28 @@ deprecation._PRINT_DEPRECATION_WARNINGS = False
 
 LOG_DIR = '/tmp/procgen/test'
 
-def test_model(venv, model, num_per_model):
+def test_model(venv, model, num_per_model, num_envs):
     """
     Runs a vectorized environment with model until it has num_data episodes of data
     """
     obs = venv.reset()
     ep_rewards = []
+    done_cts = [0]*num_envs
     while len(ep_rewards) < num_per_model:
         actions, values, states, neglogpacs = model.step(obs)
 
         obs, rewards, dones, infos = venv.step(actions)
 
-        for info in infos:
+        for i in range(num_envs):
+            if (done_cts[i] >= num_per_model // num_envs):
+                continue
+            info = infos[i]
             maybeepinfo = info.get('episode')
             if maybeepinfo:
+                done_cts[i] += 1
                 ep_rewards.append(maybeepinfo['r'])
                 # print(len(ep_rewards))
+    #print(done_cts)
     return ep_rewards[:num_per_model]
 
 def make_venv(name, start_level, num_levels=None, num_envs=16, mode='easy'):
@@ -64,12 +70,12 @@ def main():
     parser.add_argument('--env_name', type=str, default='fruitbot')
     parser.add_argument('--num_levels_train', type=int, default=100)
     parser.add_argument('--start_level_train', type=int, default=0)
-    parser.add_argument('--num_levels_test', type=int, default=100)
+    parser.add_argument('--num_levels_test', type=int, default=50000)
     parser.add_argument('--start_level_test', type=int, default=500)
     parser.add_argument('--num_envs', type=int, default=64)
     parser.add_argument('--num_per_model', type=int, default=128)
-    parser.add_argument('--eval_freq', type=int, default=10)
-    parser.add_argument('--eval_stop', type=int, default=10_000_000)
+    parser.add_argument('--eval_freq', type=int, default=1)
+    parser.add_argument('--eval_stop', type=int, default=60)
     parser.add_argument('--figure_title', type=str, default='')
     parser.add_argument('--model_dir', type=str, default='tmp/procgen/checkpoints')
     parser.add_argument('--save_dir', type=str, default='outputs')
@@ -83,7 +89,7 @@ def main():
     venv_train = make_venv(args.env_name, args.start_level_train, args.num_levels_train, args.num_envs)
     venv_test = make_venv(args.env_name, args.start_level_test, args.num_levels_test, args.num_envs)
 
-    network_fn = lambda x: build_impala_cnn(x, depths=[16, 32, 32], emb_size=256)
+    network_fn = lambda x: build_impala_batchnorm(x, depths=[16, 32, 32], emb_size=256)
     ob_space = venv_train.observation_space
     ac_space = venv_train.action_space
 
@@ -110,8 +116,8 @@ def main():
 
             model.load(file)
 
-            rew_train = test_model(venv_train, model, args.num_per_model)
-            rew_test = test_model(venv_test, model, args.num_per_model)
+            rew_train = test_model(venv_train, model, args.num_per_model, args.num_envs)
+            rew_test = test_model(venv_test, model, args.num_per_model, args.num_envs)
 
             train_data.append(rew_train)
             test_data.append(rew_test)
