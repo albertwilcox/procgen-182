@@ -72,24 +72,66 @@ def make_venv(name, start_level, num_levels=None, num_envs=16, mode='easy'):
 
 
 def plot_reward_training(train_files, test_files, save_dir, title='', x_mult=1):
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+
     if type(train_files) == str:
         train_files = [train_files]
     if type(test_files) == str:
         test_files = [test_files]
 
-    train_data = np.array([np.loadtxt(f) for f in train_files])
-    test_data = np.array([np.loadtxt(f) for f in test_files])
+    train_data = np.array([np.loadtxt(f, delimiter=',') for f in train_files])
+    test_data = np.array([np.loadtxt(f, delimiter=',') for f in test_files])
 
     plt.figure()
     plt.title(title)
     plt.ylabel('Avg. Reward')
     plt.xlabel('Training timesteps')
-    x = np.arange(len(train_data)) * x_mult
-    y_train = np.mean(train_data, axis=(0,2)).squeeze()
-    y_test = np.mean(test_data, axis=(0,2)).squeeze()
+    x = np.arange(train_data.shape[1]) * x_mult
+    y_train = np.mean(train_data, axis=(0, 2)).squeeze()
+    y_test = np.mean(test_data, axis=(0, 2)).squeeze()
     plt.plot(x, y_train, label='Training Levels', c='g')
     plt.plot(x, y_test, label='Testing Levels', c='b')
     plt.legend()
+    plt.savefig(os.path.join(save_dir, 'graph.pdf'))
+    plt.savefig(os.path.join(save_dir, 'graph_im.png'))
+
+
+def plot_baselines(train_files, test_files, save_dir, x_mult):
+    """
+    The files must come in 2D arrays, where each subarray contains a list of training trajectories to average over
+    for a given number of training levels
+    """
+    assert len(train_files) == 4 and len(test_files) == 4, 'this function is not capable of operating outside of its very narrow range'
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+
+    titles = ['50 Training Levels', '100 Training Levels', '250 Training Levels', '500 Training Levels']
+
+    train_data = [np.array([np.loadtxt(f, delimiter=',') for f in files]) for files in train_files]
+    test_data = [np.array([np.loadtxt(f, delimiter=',') for f in files]) for files in test_files]
+
+    fig, axs = plt.subplots(1, 4, sharex=True, sharey=True, figsize=(15, 5))
+    fig.suptitle("Baselines")
+    # fig.supylabel('Avg. Reward')
+    # fig.supxlabel('Training timesteps')
+    # fig.set()
+    # fig.add_subplot(111, frameon=False)
+    # plt.xlabel('Timesteps')
+    # plt.tick_params(labelcolor='none', top='off', bottom='off', left='off', right='off')
+    for i, (dat_train, dat_test) in list(enumerate(zip(train_data, test_data))):
+        x = np.arange(dat_train.shape[1]) * x_mult
+        y_train = np.mean(dat_train, axis=(0, 2)).squeeze()
+        y_test = np.mean(dat_test, axis=(0, 2)).squeeze()
+        axs[i].plot(x, y_train, label='Training Levels', c='g')
+        axs[i].plot(x, y_test, label='Testing Levels', c='b')
+        axs[i].set_title(titles[i])
+        axs[i].set_xlabel('Timesteps')
+    axs[0].set_ylabel('Average Reward')
+    axs[3].legend()
+    # axs[0].set_xlabel('Timesteps')
+
+    # fig.legend()
     plt.savefig(os.path.join(save_dir, 'graph.pdf'))
     plt.savefig(os.path.join(save_dir, 'graph_im.png'))
 
@@ -255,4 +297,15 @@ def main():
 if __name__ == '__main__':
     # main()
     # make_videos('checkpoints_250')
-    visualize_layers('checkpoints_250/03050', 'vis_test')
+    # visualize_layers('checkpoints_250/03050', 'vis_test')
+    # plot_reward_training(['outputs/base_500/train_data.csv', 'outputs/base_500_2/train_data.csv'],
+    #                      ['outputs/base_500/test_data.csv', 'outputs/base_500_2/test_data.csv'],
+    #                      'graphs/500', title='500 Training Levels', x_mult=163_840)
+    # plot_reward_training(['outputs/base_100_1_16env/train_data.csv', 'outputs/base_100_2_16env/train_data.csv'],
+    #                      ['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv'],
+    #                      'graphs/100_16env', title='100 Training Levels, 16 Environments', x_mult=163_840)
+    plot_baselines([['outputs/base_50/train_data.csv'], ['outputs/base_100_1/train_data.csv'],
+                    ['outputs/base_250/train_data.csv'], ['outputs/base_500/train_data.csv', 'outputs/base_500_2/test_data.csv']],
+                   [['outputs/base_50/test_data.csv'], ['outputs/base_100_1/test_data.csv'],
+                    ['outputs/base_250/test_data.csv'], ['outputs/base_500/test_data.csv', 'outputs/base_500_2/test_data.csv']],
+                   'graphs/baselines', x_mult=163_840)
