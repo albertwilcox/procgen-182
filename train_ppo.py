@@ -1,5 +1,5 @@
 import os, random, time, argparse, gym, sys
-import lib.logz
+import lib.logz as logz
 import procgen
 import numpy as np
 import tensorflow as tf
@@ -7,48 +7,48 @@ import tensorflow.keras.layers as layers
 import gym
 from gym import wrappers
 
-import lib.ppo
+import lib.ppo as ppo
 from lib.utils import *
 from lib.schedulers import *
 
 
-class ResBlock(tf.keras.models.Model):
-
-    class InnerBlock(tf.keras.models.Model):
-
-        def __init__(self, channels):
-            super(ResBlock.InnerBlock, self).__init__()
-            self.conv1 = tf.keras.layers.Conv2D(channels, (3, 3), padding='same')
-            self.conv2 = tf.keras.layers.Conv2D(channels, (3, 3), padding='same')
-
-        def call(self, x):
-            z = tf.keras.activations.relu(x)
-            z = self.conv1(z)
-            z = tf.keras.activations.relu(z)
-            z = self.conv2(z)
-            return x + z
-
-    def __init__(self, channels, input_shape=None):
-        super(ResBlock, self).__init__()
-        if input_shape:
-            self.conv = tf.keras.layers.Conv2D(channels, (3, 3), padding='same', input_shape=input_shape)
-        else:
-            self.conv = tf.keras.layers.Conv2D(channels, (3, 3), padding='same')
-        self.pool = tf.keras.layers.MaxPool2D(pool_size=(3, 3), strides=2)
-        self.block1 = self.InnerBlock(channels)
-        self.block2 = self.InnerBlock(channels)
-
-    def call(self, x):
-        x = self.conv(x)
-        x = self.pool(x)
-        x = self.block1(x)
-        x = self.block2(x)
-        return x
+# class ResBlock(tf.keras.models.Model):
+#
+#     class InnerBlock(tf.keras.models.Model):
+#
+#         def __init__(self, channels):
+#             super(ResBlock.InnerBlock, self).__init__()
+#             self.conv1 = tf.keras.layers.Conv2D(channels, (3, 3), padding='same')
+#             self.conv2 = tf.keras.layers.Conv2D(channels, (3, 3), padding='same')
+#
+#         def call(self, x):
+#             z = tf.keras.activations.relu(x)
+#             z = self.conv1(z)
+#             z = tf.keras.activations.relu(z)
+#             z = self.conv2(z)
+#             return x + z
+#
+#     def __init__(self, channels, input_shape=None):
+#         super(ResBlock, self).__init__()
+#         if input_shape:
+#             self.conv = tf.keras.layers.Conv2D(channels, (3, 3), padding='same', input_shape=input_shape)
+#         else:
+#             self.conv = tf.keras.layers.Conv2D(channels, (3, 3), padding='same')
+#         self.pool = tf.keras.layers.MaxPool2D(pool_size=(3, 3), strides=2)
+#         self.block1 = self.InnerBlock(channels)
+#         self.block2 = self.InnerBlock(channels)
+#
+#     def call(self, x):
+#         x = self.conv(x)
+#         x = self.pool(x)
+#         x = self.block1(x)
+#         x = self.block2(x)
+#         return x
 
 
 class ImpalaModel(tf.keras.models.Model):
 
-    def __init__(self, policy, input_shape, num_actions=10):
+    def __init__(self, input_shape, num_out=256):
 
         # self.rb1 = ResBlock(16, input_shape)
         # self.rb2 = ResBlock(32)
@@ -56,11 +56,7 @@ class ImpalaModel(tf.keras.models.Model):
         # self.relu = tf.keras.layers.ReLU()
 
         flatten = tf.keras.layers.Flatten()
-        fc1 = tf.keras.layers.Dense(256, activation='relu')
-        if policy:
-            fc2 = tf.keras.layers.Dense(num_actions, activation='softmax')
-        else:
-            fc2 = tf.keras.layers.Dense(1)
+        fc = tf.keras.layers.Dense(256, activation='relu')
 
         inputs = tf.keras.Input(shape=input_shape)
         x = self.res_block(inputs, 16)
@@ -68,8 +64,7 @@ class ImpalaModel(tf.keras.models.Model):
         x = self.res_block(x, 32)
         x = tf.keras.activations.relu(x)
         x = flatten(x)
-        x = fc1(x)
-        x = fc2(x)
+        x = fc(x)
 
         super(ImpalaModel, self).__init__(inputs=inputs, outputs=x)
 
@@ -102,27 +97,15 @@ class ImpalaModel(tf.keras.models.Model):
     #     return x
 
 
+def impala(input_shape: tuple, num_out: int) -> tf.keras.Model:
+    return ImpalaModel(input_shape, num_out)
+
+
 def fb_p_impala(input_shape: tuple, num_actions:int) -> tf.keras.Model:
-    # rb1 = ResBlock(16, input_shape)
-    # rb2 = ResBlock(32)
-    # rb3 = ResBlock(32)
-    # relu = tf.keras.layers.ReLU()
-    # flatten = tf.keras.layers.Flatten()
-    # fc1 = tf.keras.layers.Dense(256, activation='relu')
-    # fc2 = tf.keras.layers.Dense(num_actions, activation='softmax')
-    # return tf.keras.models.Sequential([rb1, rb2, rb3, relu, flatten, fc1, fc2])
     return ImpalaModel(True, input_shape, num_actions)
 
 
 def fb_v_impala(input_shape: tuple) -> tf.keras.Model:
-    # rb1 = ResBlock(16, input_shape)
-    # rb2 = ResBlock(32)
-    # rb3 = ResBlock(32)
-    # relu = tf.keras.layers.ReLU()
-    # flatten = tf.keras.layers.Flatten()
-    # fc1 = tf.keras.layers.Dense(256, activation='relu')
-    # fc2 = tf.keras.layers.Dense(1)
-    # return tf.keras.models.Sequential([rb1, rb2, rb3, relu, flatten, fc1, fc2])
     return ImpalaModel(False, input_shape)
 
 
@@ -181,22 +164,26 @@ def cartpole_value_model(input_shape: tuple) -> tf.keras.Model:
 
     return tf.keras.Sequential([fc1, fc2, fc3])
 
+def cartpole_model(input_shape: tuple, num_out: int) -> tf.keras.Model:
+    """
+    For CartPole we'll use a smaller network.
+    """
+    fc1 = tf.keras.layers.Dense(32, activation='tanh', input_shape=input_shape)
+    fc2 = tf.keras.layers.Dense(num_out, activation='tanh')
+
+    return tf.keras.Sequential([fc1, fc2])
+
 
 def learn(env, args):
     if args.env == 'procgen:procgen-fruitbot-v0':
-        policy_func_constructor = fb_p_impala
-        value_func_constructor = fb_v_impala
-        # policy_func_constructor = fruitbot_policy_model
-        # value_func_constructor = fruitbot_value_model
+        model_constructor = impala
 
         ppo.learn(
             env,
-            policy_func_constructor,
-            value_func_constructor,
+            model_constructor,
             args.logdir,
-            epochs=args.epochs,
-             policy_lr=5e-4,
-             value_lr=5e-4,
+            updates=args.epochs,
+            lr=5e-4,
             load_policy_from=args.load_policy_from,
             load_value_from=args.load_value_from,
             save_freq=args.save_freq,
@@ -204,16 +191,16 @@ def learn(env, args):
         )
         env.close()
     elif args.env == 'CartPole-v0':
-        policy_func_constructor = cartpole_policy_model
-        value_func_constructor = cartpole_value_model
+        model_constructor = cartpole_model
 
         ppo.learn(
             env,
-            policy_func_constructor,
-            value_func_constructor,
+            model_constructor,
             args.logdir,
+            lr=3e-4,
+            latent_dim=32,
             entropy_coef=0,
-            epochs=args.epochs,
+            updates=args.epochs,
             # load_from=args.load_from,
             save_freq=args.save_freq,
             fruitbot=False

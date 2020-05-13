@@ -18,11 +18,19 @@ import os, time, datetime
 import numpy as np
 import matplotlib.pyplot as plt
 
+import gym
+from gym import wrappers
+
 # import tensorflow.python.util.deprecation as deprecation
 from tensorflow_core.python.util import deprecation
 deprecation._PRINT_DEPRECATION_WARNINGS = False
 
 LOG_DIR = '/tmp/procgen/test'
+
+ent_coef = .01
+nsteps = 256
+vf_coef = 0.5
+
 
 def test_model(venv, model, num_per_model):
     """
@@ -42,6 +50,7 @@ def test_model(venv, model, num_per_model):
                 # print(len(ep_rewards))
     return ep_rewards[:num_per_model]
 
+
 def make_venv(name, start_level, num_levels=None, num_envs=16, mode='easy'):
     venv = ProcgenEnv(num_envs=num_envs, env_name=name, num_levels=num_levels,
                       start_level=start_level, distribution_mode=mode)
@@ -54,6 +63,7 @@ def make_venv(name, start_level, num_levels=None, num_envs=16, mode='easy'):
     venv = VecNormalize(venv=venv, ob=False)
 
     return venv
+
 
 def plot_reward_training(train_files, test_files, save_dir, title='', x_mult=1):
     if type(train_files) == str:
@@ -77,11 +87,82 @@ def plot_reward_training(train_files, test_files, save_dir, title='', x_mult=1):
     plt.savefig(os.path.join(save_dir, 'graph.pdf'))
     plt.savefig(os.path.join(save_dir, 'graph_im.png'))
 
-def main():
-    ent_coef = .01
-    nsteps = 256
-    vf_coef = 0.5
 
+def video_checkpoint(start_file, checkpoints, dest):
+    env = gym.make('procgen:procgen-fruitbot-v0', start_level=1000, distribution_mode='easy')
+    # env = wrappers.Monitor(env, dest)
+
+    network_fn = lambda x: build_impala_cnn(x, depths=[16, 32, 32], emb_size=256)
+    ob_space = env.observation_space
+    ac_space = env.action_space
+
+    policy = build_policy(env, network_fn, clip_vf=True)
+    model = Model(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=1, nbatch_train=0,
+                  nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef, max_grad_norm=0)
+
+    checkpoints.sort()
+    for cp in checkpoints:
+        model.load(os.path.join(start_file, cp))
+        env_w = gym.make('procgen:procgen-fruitbot-v0', start_level=1000, distribution_mode='easy')
+        env_w = wrappers.Monitor(env_w, os.path.join(dest, cp), force=True)
+
+        for i in range(5):
+            obs = env_w.reset()
+            while True:
+                action, _, __, ___ = model.step(obs)
+
+                obs, _, done, ___ = env_w.step(action)
+
+                if done:
+                    break
+
+
+def visualize_layers(file, dest):
+    env = gym.make('procgen:procgen-fruitbot-v0', start_level=1000, distribution_mode='easy')
+    # env = wrappers.Monitor(env, dest)
+
+    network_fn = lambda x: build_impala_cnn(x, depths=[16, 32, 32], emb_size=256)
+    ob_space = env.observation_space
+    ac_space = env.action_space
+
+    policy = build_policy(env, network_fn, clip_vf=True)
+    model = Model(policy=policy, ob_space=ob_space, ac_space=ac_space, nbatch_act=1, nbatch_train=0,
+                  nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef, max_grad_norm=0)
+
+    model.load(file)
+
+    first_layer = model.sess.run(tf.trainable_variables()[0])
+    filters = [first_layer[:, :, :, idx] for idx in range(16)]
+
+    fig, ax = plt.subplots(4, 4)
+    fig.suptitle('Visualizing Convolutional Layer Filters')
+    for i, filter in list(enumerate(filters)):
+        a = i // 4
+        b = i % 4
+        ax[a, b].imshow(filter / np.max(filter))
+    plt.show()
+
+
+def make_videos(file):
+    important = [
+                    '00001',
+                    '00010',
+                    '00020',
+                    '00030',
+                    '00050',
+                    '00100',
+                    '00500',
+                    '01000',
+                    '01500',
+                    '02000',
+                    '02500',
+                    '03000',
+                ]
+    dest = os.path.join('videos', datetime.datetime.now().strftime("%m-%d-%H-%M-%S"))
+    video_checkpoint(file, important, dest)
+
+
+def main():
     parser = argparse.ArgumentParser(description='Process procgen testing arguments.')
     parser.add_argument('--env_name', type=str, default='fruitbot')
     parser.add_argument('--num_levels_train', type=int, default=100)
@@ -166,4 +247,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    # main()
+    # make_videos('checkpoints_250')
+    visualize_layers('checkpoints_250/03050', 'vis_test')

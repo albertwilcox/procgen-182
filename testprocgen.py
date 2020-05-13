@@ -11,8 +11,8 @@ if __name__ == '__main__':
         9: shoot
         10-14: do nothing
     """
-    env = gym.make('procgen:procgen-fruitbot-v0', distribution_mode='easy', start_level=1, num_levels=1)
-    # env = wrappers.Monitor(env, 'test')
+    env = gym.make('procgen:procgen-fruitbot-v0', distribution_mode='easy')
+    env = wrappers.Monitor(env, 'test', force=True)
     obs = env.reset()
     i=0
     while True:
@@ -25,5 +25,6 @@ if __name__ == '__main__':
             i+=1
             print(i)
             obs = env.reset()
+
 
 
