@@ -234,7 +234,7 @@ $$\begin{array}{|l|l|l|l|l|}
 Ours, ensemble of 10
 
 
-\begin{array}{|l|l|l|l|l|}
+$$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
 \text{Trial 1} & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
