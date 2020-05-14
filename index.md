@@ -24,6 +24,7 @@ while avoiding other foods such as fried eggs and ice cream. At the same time, t
 walls by making its way through gaps in them. A demonstration of the environment, played by a human, can be found below.
 
 {% include image.html url="https://i.imgur.com/oMhGdd8.gif" description="The Fruitbot environment" %}
+This is a video: https://i.imgur.com/oMhGdd8.gif
 
 ### Environment Details
 The observation returned by the environment is a 64x64x3 tensor encoding an image of the game. 
@@ -150,6 +151,7 @@ each block has the number of filters explained in the diagram.
 The following visualization shows how the model trained on 250 training levels performed on test levels over time.
 
 {% include image.html url="https://i.imgur.com/iUUVthe.gif" description="An agent trained on 250 training levels" %}
+This is a video: https://i.imgur.com/oMhGdd8.gif
 
 By the time this model reaches 50 million timesteps of training it has far surpassed human performance, consuming
 as much fruit as possible, and hitting no junk food unless it has no other choice. It even opts not to pursue 
