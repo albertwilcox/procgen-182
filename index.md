@@ -3,7 +3,13 @@
 
 ## Introduction
 
-TODO: brief summary of what we did and what our results were
+In this project we experimented with various ways to improve a reinforcement agent's ability to generalize to unseen data. We used the procgen environment fruitbot to experiment with this, because it
+has a hundred thousand different levels, allowing us to easily test whether its learning on some levels generalizes to its
+ability to play other unseen levels. We used a PPO2 agent and ran experiments with 10 million training steps. We experimented
+with changing the number of unique training levels and found that when given at least training levels, the agent didn't struggle at all
+with generalization. We also tested batch normalization, adjusting the network architecture, 
+changing the hyperparameters, and using ensembles with previous training iterations of the same agent, and found the hyperparameters
+and ensembles to be the best modifications, significantly improving the agent's generalization ability when given very few training levels.
 
 ## Problem Statement
 
