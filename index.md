@@ -92,10 +92,17 @@ and act by choosing the best action based on this Q function,
 
 $$a_{t} = \operatorname{arg\,max}_a Q(s_t, a)$$
 
-DQN's are trained like a normal neural network, with the target being the Q function:
-$$\operatorname{max}_a Q(s_t, a)$$
-and the output network being trained to predict the target. The main difference is that data is being collected 
-while the agent runs through the enviroment.
+To train a DQN, we keep an older Q function model, parametrized by $$\theta_\text{target}$$ that we update 
+periodically with the values from a moving parametrization, $$\theta$$. Then, we pretend that the output
+of the target Q function is completely accuracte, and formulate the loss so the moving Q function predicts
+a Q value based on that target:
+
+$$L(\theta) = \mathbb{E}_{(s_t,a_t,r_t,s_{t+1})\sim D}
+\left[ 
+\Big(r_t + \gamma \max_{a \in \mathcal{A}} Q_{\theta^-}(s_{t+1},a) - Q_\theta(s_t,a_t)\Big)^2
+\right]$$
+
+where $$D$$ is an experience replay buffer storing a fixed amount (usually 1,000,000) of past frames.
 
 The DQN can be improved upon in a variety of ways, and Rainbow DQN is simply a DQN that uses all those improvements.
 
