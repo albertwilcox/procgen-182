@@ -273,7 +273,7 @@ As for ensembles, using an ensemble of 10 performed better than the baseline in 
 
 #### Contributions
 * Wrote the parallelized version of Q-networks, replay
-* Trained all of the models
+* Trained all of the models, performed many of the experiments
 * Wrote the ensemble code
 * Wrote the experiments section of the website
 
