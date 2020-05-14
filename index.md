@@ -247,18 +247,15 @@ Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
 Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
 \end{tabular}
 \end{table}$$
-<<<<<<< HEAD
 
 Baseline, ensemble of 10
-$$\begin{table}[]
-\begin{tabular}{|l|l|l|l|l|}
+$$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
 Trial 1 & 18.17 & 17.34 & 23.27 & 26.34 \\ \hline
 Trial 2 & 16.34 & 23.05 & 21.27 & 25.43 \\ \hline
 Mean    & 17.26 & 20.20 & 22.27 & 25.89 \\ \hline
-\end{tabular}
-\end{table}$$
+\end{array}$$
 
 Amazingly, with all of our changes, models trained on only 50 levels could compete with models trained with 500 levels!
 
