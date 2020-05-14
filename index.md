@@ -272,7 +272,7 @@ As for ensembles, using an ensemble of 10 performed better than the baseline in 
 ~ 30 Hours
 
 #### Contributions
-* Wrote the parallelized version of Q-networks, replay
+* Wrote the parallelized version of Q-networks, replay, before that got thrown out
 * Trained all of the models, performed many of the experiments
 * Wrote the ensemble code
 * Wrote the experiments section of the website
