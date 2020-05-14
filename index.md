@@ -9,7 +9,7 @@ TODO: brief summary of what we did and what our results were
 
 
 ### Fruitbot
-ProcGen is a set of RL tasks designed my OpenAI to investigate reinforcement learning agents' abilities to learn 
+ProcGen is a set of RL tasks designed by OpenAI to investigate reinforcement learning agents' abilities to learn 
 generalizable skills. All ProcGen environments have a variety of procedurally generated levels to train and test on.
 
 For this project we focussed on training a model to play the ProcGen environment known as Fruitbot, 
