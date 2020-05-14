@@ -167,7 +167,7 @@ The baseline model used 64 parallel environments to train, but we experimented w
 
 {% include image.html url="https://imgur.com/nZxefl7.png" description="The effect of reduced number of parallel environments on model performance for the baseline IMPALA architecture." %}
 
-This could essentially be thought of as reducing the batch size, in that each learning step will only recieve the gradients from a batch of 16 episodes, instead of 64. Since the losses in this PPO algorithm are determined by taking the mean over a batch, reducing the size of a batch increases the noise in the gradient. And reducing the batch size is known to prevent overfitting. (We could reference a paper, such as https://openreview.net/pdf?id=rkjZ2Pcxe to support this claim).
+This could essentially be thought of as reducing the batch size, in that each learning step will only recieve the gradients from a batch of 16 episodes, instead of 64. Since the losses in this PPO algorithm are determined by taking the mean over a batch, reducing the size of a batch increases the noise in the gradient. Noisier gradients can help prevent a network from overfitting, making it generalize better.
 
 Additionally, with 16 parallel environments it tends to converge more quickly than with 64. This makes sense, because with 1/4 the batch size, 4x as many training updates will be performed in the same number of steps.
 
@@ -210,10 +210,9 @@ $$\begin{array}{|l|l|l|l|}
 
 ### Final results
 
-For our final results, we used 16 parallel environments to train IMPALA network, evaluated their test reward in an ensemble with 10 intermediate models, and compared that to the baseline, both with and without ensembles. The different colums represent the number of training samples, while the different rows indicate multiple training runs.
+For our final results, we used 16 parallel environments to train IMPALA network, evaluated their average test reward in an ensemble with 10 intermediate models, and compared that to the baseline, both with and without ensembles. The different colums represent the number of training samples, while the different rows indicate multiple training runs.
 
-Ours, no ensemble
-
+Ours (16 parallel environments), no ensemble
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
@@ -222,8 +221,7 @@ $$\begin{array}{|l|l|l|l|l|}
 \text{Mean}    & 17.29 & 22.27 & 22.51 & 24.28 \\ \hline
 \end{array}$$
 
-Baseline, no ensemble
-
+Baseline (64 parallel envs), no ensemble
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
@@ -236,6 +234,7 @@ $$\begin{array}{|l|l|l|l|l|}
 Ours, ensemble of 10
 
 $$\begin{array}{|l|l|l|l|l|}
+\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
 \text{Trial 1} & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
@@ -244,7 +243,6 @@ $$\begin{array}{|l|l|l|l|l|}
 \end{array}$$
 
 Baseline, ensemble of 10
-
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
@@ -253,7 +251,9 @@ $$\begin{array}{|l|l|l|l|l|}
 \text{Mean}    & 17.26 & 20.20 & 22.27 & 25.89 \\ \hline
 \end{array}$$
 
-Amazingly, with all of our changes, models trained on only 50 levels could compete with models trained with 500 levels!
+Overall, we found that 16 parallel environments to have consistently outperformed the baseline of 64 for 50, 100, and 250 training levels, both with and without ensembles, outperforming in every single trial. However, as our other change (reducing the batch size to 16) mainly targets overfitting, and 500 training levels is enough to generalize easily, the baseline performs similarly at that point.
+
+As for ensembles, using an ensemble of 10 performed better than the baseline in every single trial that we performed. This is especially exciting because our method of using ensembles (voting alongside earlier iterations of yourself) requires no extra training time or data. It across the board improved the test set reward, for a relatively cost-free change.
 
 ## Team Contributions
 
@@ -270,6 +270,14 @@ Amazingly, with all of our changes, models trained on only 50 levels could compe
 * Made the training visualization
 
 ### Dylan
+#### Time
+~ 30 Hours
+
+#### Contributions
+* Wrote the parallelized version of Q-networks, replay, before that got thrown out
+* Trained all of the models, performed many of the experiments
+* Wrote the ensemble code
+* Wrote the experiments section of the website
 
 
 ### Victor
