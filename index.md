@@ -150,10 +150,6 @@ As expected, models trained on more levels saw consistently better test level pe
 
 {% include image.html url="https://imgur.com/vem5u9J.png" description="The performance of our baseline models" %}
 
-The following chart shows how models trained on different numbers of training levels performed on test levels.
-
-{% include image.html url="https://i.pinimg.com/originals/47/de/5e/47de5ec70e7f1eee63e4b4e9e6511386.jpg" description="giv me ur company" %}
-
 Because it seemed like 250 and 500 training levels both generalized nearly perfectly to the test data, we decided to limit the number of training levels to 100 for our future experiments. While we technically have access to as much as 100k levels, limiting the amount of training data allows us to simulate a scenario where we don't have access to such a large dataset.
 
 ### Number of Parallel Environments
@@ -189,13 +185,17 @@ It seemed to perform slightly worse than the baseline, and was highly inconsiste
 Since batch normalization also often allows one to train a neural network more quickly, we also tried increasing the learning rate by 4x and seeing if it could effectively train with fewer iterations. However, this performed terribly, not reaching an average reward of even 15, so we decided not pursue this further.
 
 ### Ensembles
-We took some of the models trained previously and using them in an ensemble. Specifically, for a given model, we assemble an ensemble from it along with some of its intermediate models from training. We choose an action from this ensemble by holding a simple majority vote, with more weight given to more recent models from training. (Each subsequent past intermediate model is given 0.95x the weight of the previous model). We found this to improve generalization significantly across the board, especially for networks trained on fewer levels:
+We took some of the models trained previously and using them in an ensemble. Specifically, for a given model, we assemble an ensemble from it along with some of its intermediate models from training. We choose an action from this ensemble by holding a simple majority vote, with more weight given to more recent models from training. (Each subsequent past intermediate model is given 0.95x the weight of the previous model). We found this to improve generalization significantly across the board, especially for networks trained on fewer levels. 
+
+### Final results
+
+For our final results, we used 16 parallel environments to train IMPALA network, evaluated their test reward in an ensemble with 10 intermediate models, and compared that to the baseline, both with and without ensembles:
 
 16 Parallel environments, 50 training levels:
 
 Model 1:
 1: 16.017578
-3: 17.492188
+3: 17.492188 
 10: 20.199219
 
 Model 2:
@@ -206,7 +206,7 @@ Model 2:
 16 Parallel environments, 100 training levels:
 
 Model 1:
-1: 22.5315
+1: 22.5315 22.189453
 3: 20.6836
 10: 24.0527
 
@@ -232,7 +232,7 @@ Model 2:
 3: 24.607422
 10: 25.53711
 
-Amazingly, with this, models trained on only 50 levels could compete with models trained with 500 levels!
+Amazingly, with this, models trained on only 50 levels could compete with models trained with 500 levels! In the end, we ended up using a batch size of 16, and 
 
 ## Team Contributions
 
