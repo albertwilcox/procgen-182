@@ -199,12 +199,12 @@ We took some of the models trained previously and using them in an ensemble. Spe
 
 We provided more results with ensembles in the final results, but this table compares differing numbers of intermediate networks in the ensemble, where we find an ensemble of 10 to be an improvement across the board:
 
-$$\begin{array}{|l|l|l|l}
+$$\begin{array}{|l|l|l|l|}
 \hline
-         & Trial 1 & Trial 2 & Average \\ \hline
-1 Pred.  & 22.53   & 22.01   & 22.27   \\ \hline
-3 Pred   & 20.68   & 21.54   & 21.11   \\ \hline
-10 Pred. & 24.05   & 23.54   & 23.80   \\ \hline
+         & \text{Trial 1} & \text{Trial 2} & \text{Average} \\ \hline
+\text{1 Pred.}  & 22.53   & 22.01   & 22.27   \\ \hline
+\text{3 Pred.}   & 20.68   & 21.54   & 21.11   \\ \hline
+\text{10 Pred.} & 24.05   & 23.54   & 23.80   \\ \hline
 \end{array}$$
 
 
@@ -216,41 +216,39 @@ Ours, no ensemble
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
-Trial 1 & 16.02 & 22.53 & 22.46 & 25.87 \\ \hline
-Trial 2 & 18.55 & 22.01 & 22.55 & 22.69 \\ \hline
-Mean    & 17.29 & 22.27 & 22.51 & 24.28 \\ \hline
+\text{Trial 1} & 16.02 & 22.53 & 22.46 & 25.87 \\ \hline
+\text{Trial 2} & 18.55 & 22.01 & 22.55 & 22.69 \\ \hline
+\text{Mean}    & 17.29 & 22.27 & 22.51 & 24.28 \\ \hline
 \end{array}$$
 
 Baseline, no ensemble
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
-Trial 1 & 13.04 & 17.87 & 22.34 & 25.03 \\ \hline
-Trial 2 & 15.89 & 21.57 & 21.34 & 22.26 \\ \hline
-Mean    & 14.46 & 19.72 & 21.84 & 23.65 \\ \hline
+\text{Trial 1} & 13.04 & 17.87 & 22.34 & 25.03 \\ \hline
+\text{Trial 2} & 15.89 & 21.57 & 21.34 & 22.26 \\ \hline
+\text{Mean}    & 14.46 & 19.72 & 21.84 & 23.65 \\ \hline
 \end{array}$$
 
 
 Ours, ensemble of 10
 
-\begin{table}[]
-\begin{tabular}{|l|l|l|l|l|}
+
+\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
-Trial 1 & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
-Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
-Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
-\end{tabular}
-\end{table}
+\text{Trial 1} & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
+\text{Trial 2} & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
+\text{Mean}    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
 \end{array}$$
 
 Baseline, ensemble of 10
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
-Trial 1 & 18.17 & 17.34 & 23.27 & 26.34 \\ \hline
-Trial 2 & 16.34 & 23.05 & 21.27 & 25.43 \\ \hline
-Mean    & 17.26 & 20.20 & 22.27 & 25.89 \\ \hline
+\text{Trial 1} & 18.17 & 17.34 & 23.27 & 26.34 \\ \hline
+\text{Trial 2} & 16.34 & 23.05 & 21.27 & 25.43 \\ \hline
+\text{Mean}    & 17.26 & 20.20 & 22.27 & 25.89 \\ \hline
 \end{array}$$
 
 Amazingly, with all of our changes, models trained on only 50 levels could compete with models trained with 500 levels!
