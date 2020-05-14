@@ -236,7 +236,7 @@ Baseline, no ensemble
 
 Ours, ensemble of 10
 
-$$\begin{table}[]
+\begin{table}[]
 \begin{tabular}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
@@ -244,8 +244,24 @@ Trial 1 & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
 Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
 Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
 \end{tabular}
-\end{table}$$
+\end{table}
 
+
+|---|---|---|---|---|
+|   |50 |100|250|500|
+|---|---|---|---|---|
+|Trial 1| 20.2
+
+|         | 50    | 100   | 250   | 500   |
+| ------- |:------|:------|:------|:------|
+| Trial 1 | 20.20 | 24.05 | 24.40 | 25.91 |
+| Trial 2 | 22.58 | 23.54 | 24.12 | 25.52 |
+|   Mean  | 21.39 | 23.80 | 24.26 | 25.72 |
+
+
+Trial 1 & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
+Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
+Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
 Amazingly, with this, models trained on only 50 levels could compete with models trained with 500 levels! In the end, we ended up using a batch size of 16, and 
 
 ## Team Contributions
