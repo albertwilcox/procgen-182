@@ -208,7 +208,7 @@ $$\begin{array}{|l|l|l|l|}
 \end{array}$$
 
 
-### Final results
+## Final results
 
 For our final results, we used 16 parallel environments to train IMPALA network, evaluated their average test reward in an ensemble with 10 intermediate models, and compared that to the baseline, both with and without ensembles. The different colums represent the number of training samples, while the different rows indicate multiple training runs.
 
