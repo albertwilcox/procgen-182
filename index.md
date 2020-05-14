@@ -199,65 +199,55 @@ We took some of the models trained previously and using them in an ensemble. Spe
 
 We provided more results with ensembles in the final results, but this table compares differing numbers of intermediate networks in the ensemble, where we find an ensemble of 10 to be an improvement across the board:
 
-$$\begin{table}[]
-\begin{tabular}{|l|l|l|l}
-\cline{1-3}
-         & Trial 1 & Trial 2 & Average \\ \cline{1-3}
-1 Pred.  & 22.53   & 22.01   & 22.27   \\ \cline{1-3}
-3 Pred   & 20.68   & 21.54   & 21.11   \\ \cline{1-3}
-10 Pred. & 24.05   & 23.54   & 23.80   \\ \cline{1-3}
-\end{tabular}
-\end{table}$$
+$$\begin{array}{|l|l|l|l|}
+\hline
+         & \text{Trial 1} & \text{Trial 2} & \text{Average} \\ \hline
+\text{1 Pred.}  & 22.53   & 22.01   & 22.27   \\ \hline
+\text{3 Pred.}   & 20.68   & 21.54   & 21.11   \\ \hline
+\text{10 Pred.} & 24.05   & 23.54   & 23.80   \\ \hline
+\end{array}$$
 
 
 ### Final results
 
 For our final results, we used 16 parallel environments to train IMPALA network, evaluated their average test reward in an ensemble with 10 intermediate models, and compared that to the baseline, both with and without ensembles. The different colums represent the number of training samples, while the different rows indicate multiple training runs.
 
-16 parallel environments, no ensemble
-$$\begin{table}[]
-\begin{tabular}{|l|l|l|l|l|}
+Ours (16 parallel environments), no ensemble
+$$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
-Trial 1 & 16.02 & 22.53 & 22.46 & 25.87 \\ \hline
-Trial 2 & 18.55 & 22.01 & 22.55 & 22.69 \\ \hline
-Mean    & 17.29 & 22.27 & 22.51 & 24.28 \\ \hline
-\end{tabular}
-\end{table}$$
+\text{Trial 1} & 16.02 & 22.53 & 22.46 & 25.87 \\ \hline
+\text{Trial 2} & 18.55 & 22.01 & 22.55 & 22.69 \\ \hline
+\text{Mean}    & 17.29 & 22.27 & 22.51 & 24.28 \\ \hline
+\end{array}$$
 
 Baseline (64 parallel envs), no ensemble
-$$\begin{table}[]
-\begin{tabular}{|l|l|l|l|l|}
+$$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
-Trial 1 & 13.04 & 17.87 & 22.34 & 25.03 \\ \hline
-Trial 2 & 15.89 & 21.57 & 21.34 & 22.26 \\ \hline
-Mean    & 14.46 & 19.72 & 21.84 & 23.65 \\ \hline
-\end{tabular}
-\end{table}$$
+\text{Trial 1} & 13.04 & 17.87 & 22.34 & 25.03 \\ \hline
+\text{Trial 2} & 15.89 & 21.57 & 21.34 & 22.26 \\ \hline
+\text{Mean}    & 14.46 & 19.72 & 21.84 & 23.65 \\ \hline
+\end{array}$$
 
 
-16 parallel envs, ensemble of 10
-$$\begin{table}[]
-\begin{tabular}{|l|l|l|l|l|}
+Ours, ensemble of 10
+\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
-Trial 1 & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
-Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
-Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
-\end{tabular}
-\end{table}$$
+\text{Trial 1} & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
+\text{Trial 2} & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
+\text{Mean}    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
+\end{array}$$
 
-Baseline (64 parallel envs), ensemble of 10
-$$\begin{table}[]
-\begin{tabular}{|l|l|l|l|l|}
+Baseline, ensemble of 10
+$$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
-Trial 1 & 18.17 & 17.34 & 23.27 & 26.34 \\ \hline
-Trial 2 & 16.34 & 23.05 & 21.27 & 25.43 \\ \hline
-Mean    & 17.26 & 20.20 & 22.27 & 25.89 \\ \hline
-\end{tabular}
-\end{table}$$
+\text{Trial 1} & 18.17 & 17.34 & 23.27 & 26.34 \\ \hline
+\text{Trial 2} & 16.34 & 23.05 & 21.27 & 25.43 \\ \hline
+\text{Mean}    & 17.26 & 20.20 & 22.27 & 25.89 \\ \hline
+\end{array}$$
 
 Overall, we found that 16 parallel environments to have consistently outperformed the baseline of 64 for 50, 100, and 250 training levels, both with and without ensembles, outperforming in every single trial. However, as our other change (reducing the batch size to 16) mainly targets overfitting, and 500 training levels is enough to generalize easily, the baseline performs similarly at that point.
 
@@ -290,12 +280,12 @@ As for ensembles, using an ensemble of 10 performed better than the baseline in 
 
 ### Victor
 #### Time
-~ 4 hours
+~ 5 hours
 
 #### Contributions
 * Helped run a couple of preliminary experiments with the models
 * Gave a couple pointers on model performance and what to improve
-* Wrote a couple of subsections of the report
+* Wrote a couple of subsections of the report 
 
 ## References
 
