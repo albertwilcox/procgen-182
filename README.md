@@ -48,20 +48,5 @@ Testing code:
 
 `python3 starter_test.py`
 
-## Sources:
-
-ProcGen Info: https://arxiv.org/pdf/1912.01588.pdf
-
-Reference Code: https://github.com/openai/train-procgen
-
-PPO: 
-* https://openai.com/blog/openai-baselines-ppo/
-* https://spinningup.openai.com/en/latest/algorithms/ppo.html
-
-Rainbow DQN: https://arxiv.org/pdf/1710.02298.pdf
-
-Dist DQN: 
-* https://arxiv.org/pdf/1707.06887.pdf
-* https://flyyufelix.github.io/2017/10/24/distributional-bellman.html
-
-Network Architecture: https://arxiv.org/pdf/1802.01561.pdf
+To create graphs you need to go into the `starter_test.py` file and adjust the parameters the way I have at
+the bottom, and then run the code.

@@ -151,6 +151,9 @@ fruit that will put it in a position where it can't avoid junk food.
 
 ## Experiments and Results
 
+Plotting note: the error bars shown in the plots below show the maximum and minimum from the trajectories
+over which we averaged to make the plots.
+
 ### Number of Training Levels
 We trained our baseline model for 10 million time steps each for models with 50, 100, 250 and 500 training levels.
 As expected, models trained on more levels saw consistently better test level performance.
@@ -244,6 +247,7 @@ Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
 Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
 \end{tabular}
 \end{table}$$
+<<<<<<< HEAD
 
 Baseline, ensemble of 10
 $$\begin{table}[]
@@ -256,7 +260,7 @@ Mean    & 17.26 & 20.20 & 22.27 & 25.89 \\ \hline
 \end{tabular}
 \end{table}$$
 
-Amazingly, with this, models trained on only 50 levels could compete with models trained with 500 levels!
+Amazingly, with all of our changes, models trained on only 50 levels could compete with models trained with 500 levels!
 
 ## Team Contributions
 
