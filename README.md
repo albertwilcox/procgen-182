@@ -40,7 +40,13 @@ pip install https://github.com/openai/baselines/archive/9ee399f5b20cd70ac0a87192
 ```
 
 ### Running
-`insert code here`
+Training code:
+
+`python3 starter_train.py --num_levels 100 --start_level 0`
+
+Testing code:
+
+`python3 starter_test.py`
 
 ## Sources:
 
