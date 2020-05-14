@@ -1,5 +1,4 @@
 import tensorflow as tf
-
 def build_impala_cnn(unscaled_images, depths=[16,32,32], **conv_kwargs):
     """
     Model used in the paper "IMPALA: Scalable Distributed Deep-RL with
@@ -60,16 +59,17 @@ def build_impala_batchnorm(unscaled_images, depths, **conv_kwargs):
         return num_str
 
     def conv_layer(out, depth):
-        out = tf.layers.BatchNormalization(axis=1)(out)
         return tf.layers.conv2d(out, depth, 3, padding='same', name='layer_' + get_layer_num_str())
 
     def residual_block(inputs):
         depth = inputs.get_shape()[-1].value
 
         out = tf.nn.relu(inputs)
+        out = tf.layers.BatchNormalization(axis=1)(out)
 
         out = conv_layer(out, depth)
         out = tf.nn.relu(out)
+        out = tf.layers.BatchNormalization(axis=1)(out) 
         out = conv_layer(out, depth)
         return out + inputs
 
@@ -87,6 +87,7 @@ def build_impala_batchnorm(unscaled_images, depths, **conv_kwargs):
 
     out = tf.layers.flatten(out)
     out = tf.nn.relu(out)
+    out = tf.layers.BatchNormalization()(out)
     out = tf.layers.dense(out, 256, activation=tf.nn.relu, name='layer_' + get_layer_num_str())
 
     return out

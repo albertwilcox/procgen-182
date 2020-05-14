@@ -93,7 +93,7 @@ def main():
     parser.add_argument('--num_levels_train', type=int, default=100)
     parser.add_argument('--start_level_train', type=int, default=0)
     parser.add_argument('--num_levels_test', type=int, default=50000)
-    parser.add_argument('--start_level_test', type=int, default=500)
+    parser.add_argument('--start_level_test', type=int, default=2000)
     parser.add_argument('--num_envs', type=int, default=64)
     parser.add_argument('--num_per_model', type=int, default=128)
     parser.add_argument('--eval_freq', type=int, default=1)
@@ -111,7 +111,7 @@ def main():
     venv_train = make_venv(args.env_name, args.start_level_train, args.num_levels_train, args.num_envs)
     venv_test = make_venv(args.env_name, args.start_level_test, args.num_levels_test, args.num_envs)
 
-    network_fn = lambda x: build_impala_batchnorm(x, depths=[16, 32, 32], emb_size=256)
+    network_fn = lambda x: build_impala_cnn(x, depths=[16, 32, 32], emb_size=256)
     ob_space = venv_train.observation_space
     ac_space = venv_train.action_space
 
