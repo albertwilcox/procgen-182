@@ -213,6 +213,7 @@ $$\begin{array}{|l|l|l|l|}
 For our final results, we used 16 parallel environments to train IMPALA network, evaluated their average test reward in an ensemble with 10 intermediate models, and compared that to the baseline, both with and without ensembles. The different colums represent the number of training samples, while the different rows indicate multiple training runs.
 
 Ours (16 parallel environments), no ensemble
+
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
@@ -222,6 +223,7 @@ $$\begin{array}{|l|l|l|l|l|}
 \end{array}$$
 
 Baseline (64 parallel envs), no ensemble
+
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
@@ -232,7 +234,8 @@ $$\begin{array}{|l|l|l|l|l|}
 
 
 Ours, ensemble of 10
-\begin{array}{|l|l|l|l|l|}
+
+$$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
 \text{Trial 1} & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
@@ -241,6 +244,7 @@ Ours, ensemble of 10
 \end{array}$$
 
 Baseline, ensemble of 10
+
 $$\begin{array}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
