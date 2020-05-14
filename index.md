@@ -24,6 +24,7 @@ while avoiding other foods such as fried eggs and ice cream. At the same time, t
 walls by making its way through gaps in them. A demonstration of the environment, played by a human, can be found below.
 
 {% include image.html url="https://i.imgur.com/oMhGdd8.gif" description="The Fruitbot environment" %}
+
 This is a video: https://i.imgur.com/oMhGdd8.gif
 
 ### Environment Details
