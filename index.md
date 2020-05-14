@@ -242,9 +242,6 @@ Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
 Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
 \end{tabular}
 \end{table}
-
-
-
 \end{array}$$
 
 Baseline, ensemble of 10
