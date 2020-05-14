@@ -99,7 +99,7 @@ a Q value based on that target:
 
 $$L(\theta) = \mathbb{E}_{(s_t,a_t,r_t,s_{t+1})\sim D}
 \left[ 
-\Big(r_t + \gamma \max_{a \in \mathcal{A}} Q_{\theta^-}(s_{t+1},a) - Q_\theta(s_t,a_t)\Big)^2
+\Big(r_t + \gamma \max_{a \in \mathcal{A}} Q_{\theta_\text{target}}(s_{t+1},a) - Q_\theta(s_t,a_t)\Big)^2
 \right]$$
 
 where $$D$$ is an experience replay buffer storing a fixed amount (usually 1,000,000) of past frames.
@@ -172,6 +172,8 @@ This could essentially be thought of as reducing the batch size, in that each le
 Additionally, with 16 parallel environments it tends to converge more quickly than with 64. This makes sense, because with 1/4 the batch size, 4x as many training updates will be performed in the same number of steps.
 
 Since this performed so well, we did all of our experiments after this one with 16 environments instead of 64. We also trained some models at 50, 250, and 500 levels with 16 environments: 
+
+{% include image.html url="https://imgur.com/zkCoixV.png" description="The baseline models trained with 16 parallel environments." %}
 
 ### Model Architecture
 
