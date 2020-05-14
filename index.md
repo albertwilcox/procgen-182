@@ -198,7 +198,8 @@ Since batch normalization also often allows one to train a neural network more q
 We took some of the models trained previously and using them in an ensemble. Specifically, for a given model, we assemble an ensemble from it along with some of its intermediate models from training. We choose an action from this ensemble by holding a simple majority vote, with more weight given to more recent models from training. (Each subsequent past intermediate model is given 0.95x the weight of the previous model). We found this to improve generalization significantly across the board, especially for networks trained on fewer levels. 
 
 We provided more results with ensembles in the final results, but this table compares differing numbers of intermediate networks in the ensemble, where we find an ensemble of 10 to be an improvement across the board:
-\begin{table}[]
+
+$$\begin{table}[]
 \begin{tabular}{|l|l|l|l}
 \cline{1-3}
          & Trial 1 & Trial 2 & Average \\ \cline{1-3}
@@ -206,7 +207,7 @@ We provided more results with ensembles in the final results, but this table com
 3 Pred   & 20.68   & 21.54   & 21.11   \\ \cline{1-3}
 10 Pred. & 24.05   & 23.54   & 23.80   \\ \cline{1-3}
 \end{tabular}
-\end{table}
+\end{table}$$
 
 
 ### Final results
@@ -217,7 +218,8 @@ For our final results, we used 16 parallel environments to train IMPALA network,
 
 
 Ours, no ensemble
-\begin{table}[]
+
+$$\begin{table}[]
 \begin{tabular}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
@@ -225,7 +227,7 @@ Trial 1 & 16.02 & 22.53 & 22.46 & 25.87 \\ \hline
 Trial 2 & 18.55 & 22.01 & 22.55 & 22.69 \\ \hline
 Mean    & 17.29 & 22.27 & 22.51 & 24.28 \\ \hline
 \end{tabular}
-\end{table}
+\end{table}$$
 
 Baseline, no ensemble
 
@@ -233,7 +235,8 @@ Baseline, no ensemble
 
 
 Ours, ensemble of 10
-\begin{table}[]
+
+$$\begin{table}[]
 \begin{tabular}{|l|l|l|l|l|}
 \hline
         & 50    & 100   & 250   & 500   \\ \hline
@@ -241,7 +244,7 @@ Trial 1 & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
 Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
 Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
 \end{tabular}
-\end{table}
+\end{table}$$
 
 Amazingly, with this, models trained on only 50 levels could compete with models trained with 500 levels! In the end, we ended up using a batch size of 16, and 
 
