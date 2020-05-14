@@ -197,50 +197,51 @@ Since batch normalization also often allows one to train a neural network more q
 ### Ensembles
 We took some of the models trained previously and using them in an ensemble. Specifically, for a given model, we assemble an ensemble from it along with some of its intermediate models from training. We choose an action from this ensemble by holding a simple majority vote, with more weight given to more recent models from training. (Each subsequent past intermediate model is given 0.95x the weight of the previous model). We found this to improve generalization significantly across the board, especially for networks trained on fewer levels. 
 
+We provided more results with ensembles in the final results, but this table compares differing numbers of intermediate networks in the ensemble, where we find an ensemble of 10 to be an improvement across the board:
+\begin{table}[]
+\begin{tabular}{|l|l|l|l}
+\cline{1-3}
+         & Trial 1 & Trial 2 & Average \\ \cline{1-3}
+1 Pred.  & 22.53   & 22.01   & 22.27   \\ \cline{1-3}
+3 Pred   & 20.68   & 21.54   & 21.11   \\ \cline{1-3}
+10 Pred. & 24.05   & 23.54   & 23.80   \\ \cline{1-3}
+\end{tabular}
+\end{table}
+
+
 ### Final results
 
 For our final results, we used 16 parallel environments to train IMPALA network, evaluated their test reward in an ensemble with 10 intermediate models, and compared that to the baseline, both with and without ensembles:
 
-16 Parallel environments, 50 training levels:
 
-Model 1:
-1: 16.017578
-3: 17.492188 
-10: 20.199219
 
-Model 2:
-1: 18.5527
-3: 19.863281
-10: 22.582031
 
-16 Parallel environments, 100 training levels:
+Ours, no ensemble
+\begin{table}[]
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+        & 50    & 100   & 250   & 500   \\ \hline
+Trial 1 & 16.02 & 22.53 & 22.46 & 25.87 \\ \hline
+Trial 2 & 18.55 & 22.01 & 22.55 & 22.69 \\ \hline
+Mean    & 17.29 & 22.27 & 22.51 & 24.28 \\ \hline
+\end{tabular}
+\end{table}
 
-Model 1:
-1: 22.5315 22.189453
-3: 20.6836
-10: 24.0527
+Baseline, no ensemble
 
-Model 2:
-1: 22.0098
-3: 22.4043
-10: 23.545
 
-Model 3:
-1: 20.626953
-3: 19.86914
-10: 22.716797
 
-16 Parallel environments, 500 training levels:
 
-Model 1:
-1: 25.865234
-3: 23.060547
-10: 25.919922
-
-Model 2:
-1: 22.689453
-3: 24.607422
-10: 25.53711
+Ours, ensemble of 10
+\begin{table}[]
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+        & 50    & 100   & 250   & 500   \\ \hline
+Trial 1 & 20.20 & 24.05 & 24.40 & 25.91 \\ \hline
+Trial 2 & 22.58 & 23.54 & 24.12 & 25.53 \\ \hline
+Mean    & 21.39 & 23.80 & 24.26 & 25.72 \\ \hline
+\end{tabular}
+\end{table}
 
 Amazingly, with this, models trained on only 50 levels could compete with models trained with 500 levels! In the end, we ended up using a batch size of 16, and 
 
