@@ -308,54 +308,54 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
-    # make_videos('checkpoints_250')
-    # visualize_layers('checkpoints_250/03050', 'vis_test')
-    # plot_two(['outputs/base_500/train_data.csv', 'outputs/base_500_2/train_data.csv'],
-    #                      ['outputs/base_500/test_data.csv', 'outputs/base_500_2/test_data.csv'],
-    #                      'graphs/500', title='500 Training Levels', x_mult=163_840)
-    # plot_two(['outputs/base_100_1_16env/train_data.csv', 'outputs/base_100_2_16env/train_data.csv'],
-    #                      ['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv'],
-    #                      'graphs/100_16env', title='100 Training Levels, 16 Environments', x_mult=163_840)
-    # plot_two(['outputs/deep_100_1_16env/train_data.csv', 'outputs/deep_100_2_16env/train_data.csv', 'outputs/deep_100_3_16env/train_data.csv'],
-    #                      ['outputs/deep_100_1_16env/test_data.csv', 'outputs/deep_100_2_16env/test_data.csv', 'outputs/deep_100_3_16env/test_data.csv'],
-    #                      'graphs/deep_100_16env', title='100 Training Levels, 16 Environments, Deeper Network', x_mult=163_840)
-    # plot_two(['outputs/shallow_100_1_16env/train_data.csv', 'outputs/shallow_100_2_16env/train_data.csv', 'outputs/shallow_100_3_16env/train_data.csv'],
-    #                      ['outputs/shallow_100_1_16env/test_data.csv', 'outputs/shallow_100_2_16env/test_data.csv', 'outputs/shallow_100_3_16env/test_data.csv'],
-    #                      'graphs/shallow_100_16env', title='100 Training Levels, 16 Environments, Shallow Network', x_mult=163_840)
-    # plot_multiple([['outputs/base_50_1/train_data.csv', 'outputs/base_50_2/train_data.csv'], ['outputs/base_100_1/train_data.csv', 'outputs/base_100_2/train_data.csv'],
-    #                 ['outputs/base_250_1/train_data.csv', 'outputs/base_250_2/train_data.csv'], ['outputs/base_500_1/train_data.csv', 'outputs/base_500_2/test_data.csv']],
-    #                [['outputs/base_50_1/test_data.csv', 'outputs/base_50_2/test_data.csv'], ['outputs/base_100_1/test_data.csv', 'outputs/base_100_2/test_data.csv'],
-    #                 ['outputs/base_250_1/test_data.csv', 'outputs/base_250_2/test_data.csv'], ['outputs/base_500_1/test_data.csv', 'outputs/base_500_2/test_data.csv']],
-    #                'graphs/baselines_final',
-    #               ['50 Training Levels', '100 Training Levels', '250 Training Levels', '500 Training Levels'],
-    #               errorbars=True)
-    # plot_multiple([['outputs/base_100_1_16env/train_data.csv', 'outputs/base_100_2_16env/train_data.csv', 'outputs/base_100_3_16env/train_data.csv'],
-    #                ['outputs/shallow_100_1_16env/train_data.csv', 'outputs/shallow_100_2_16env/train_data.csv', 'outputs/shallow_100_3_16env/train_data.csv'],
-    #                ['outputs/deep_100_1_16env/train_data.csv', 'outputs/deep_100_2_16env/train_data.csv', 'outputs/deep_100_3_16env/train_data.csv']],
-    #               [['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv', 'outputs/base_100_3_16env/test_data.csv'],
-    #                ['outputs/shallow_100_1_16env/test_data.csv', 'outputs/shallow_100_2_16env/test_data.csv', 'outputs/shallow_100_3_16env/test_data.csv'],
-    #                ['outputs/deep_100_1_16env/test_data.csv', 'outputs/deep_100_2_16env/test_data.csv', 'outputs/deep_100_3_16env/test_data.csv']],
-    #               'graphs/depth', ['Baseline', 'Shallow', 'Deep'], errorbars=True)
-    # plot_two(['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv'],
-    #          ['outputs/batchnorm_100_1_16env/test_data.csv', 'outputs/batchnorm_100_2_16env/test_data.csv',
-    #          'outputs/batchnorm_100_3_16env/test_data.csv'],
-    #          'graphs/batchnorm_2', labels=['Baseline', 'Batchnorm'], colors=['k', 'r'])
-    # plot_multiple([['outputs/base_100_1_16env/train_data.csv', 'outputs/base_100_2_16env/train_data.csv', 'outputs/base_100_3_16env/train_data.csv'],
-    #                ['outputs/batchnorm_100_1_16env/train_data.csv', 'outputs/batchnorm_100_2_16env/train_data.csv',
-    #                 'outputs/batchnorm_100_3_16env/train_data.csv']],
-    #               [['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv', 'outputs/base_100_3_16env/test_data.csv'],
-    #                ['outputs/batchnorm_100_1_16env/test_data.csv', 'outputs/batchnorm_100_2_16env/test_data.csv',
-    #                 'outputs/batchnorm_100_3_16env/test_data.csv']],
-    #               'graphs/batchnorm_eb', ['Baseline', 'Batchnorm'], errorbars=True)
-
-    plot_multiple([['outputs/base_50_1/test_data.csv', 'outputs/base_50_2/test_data.csv'],
-                   ['outputs/base_100_1/test_data.csv', 'outputs/base_100_2/test_data.csv'],
-                   ['outputs/base_250_1/test_data.csv', 'outputs/base_250_2/test_data.csv'],
-                   ['outputs/base_500_1/test_data.csv', 'outputs/base_500_2/test_data.csv']],
-                  [['outputs/base_50_1_16env/test_data.csv', 'outputs/base_50_2_16env/test_data.csv'],
-                   ['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv'],
-                   ['outputs/base_250_1_16env/test_data.csv', 'outputs/base_250_2_16env/test_data.csv'],
-                   ['outputs/base_500_1_16env/test_data.csv', 'outputs/base_500_2_16env/test_data.csv']],
-                  'graphs/64v16', titles=['50 Training Levels', '100 Training Levels', '250 Training Levels', '500 Training Levels'],
-                  labels=['64 Parallel Environments', '16 Parallel Environments'], colors=['k', 'r'], errorbars=True, suptitle='Test Set Performance')
+    main()
+    # # make_videos('checkpoints_250')
+    # # visualize_layers('checkpoints_250/03050', 'vis_test')
+    # # plot_two(['outputs/base_500/train_data.csv', 'outputs/base_500_2/train_data.csv'],
+    # #                      ['outputs/base_500/test_data.csv', 'outputs/base_500_2/test_data.csv'],
+    # #                      'graphs/500', title='500 Training Levels', x_mult=163_840)
+    # # plot_two(['outputs/base_100_1_16env/train_data.csv', 'outputs/base_100_2_16env/train_data.csv'],
+    # #                      ['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv'],
+    # #                      'graphs/100_16env', title='100 Training Levels, 16 Environments', x_mult=163_840)
+    # # plot_two(['outputs/deep_100_1_16env/train_data.csv', 'outputs/deep_100_2_16env/train_data.csv', 'outputs/deep_100_3_16env/train_data.csv'],
+    # #                      ['outputs/deep_100_1_16env/test_data.csv', 'outputs/deep_100_2_16env/test_data.csv', 'outputs/deep_100_3_16env/test_data.csv'],
+    # #                      'graphs/deep_100_16env', title='100 Training Levels, 16 Environments, Deeper Network', x_mult=163_840)
+    # # plot_two(['outputs/shallow_100_1_16env/train_data.csv', 'outputs/shallow_100_2_16env/train_data.csv', 'outputs/shallow_100_3_16env/train_data.csv'],
+    # #                      ['outputs/shallow_100_1_16env/test_data.csv', 'outputs/shallow_100_2_16env/test_data.csv', 'outputs/shallow_100_3_16env/test_data.csv'],
+    # #                      'graphs/shallow_100_16env', title='100 Training Levels, 16 Environments, Shallow Network', x_mult=163_840)
+    # # plot_multiple([['outputs/base_50_1/train_data.csv', 'outputs/base_50_2/train_data.csv'], ['outputs/base_100_1/train_data.csv', 'outputs/base_100_2/train_data.csv'],
+    # #                 ['outputs/base_250_1/train_data.csv', 'outputs/base_250_2/train_data.csv'], ['outputs/base_500_1/train_data.csv', 'outputs/base_500_2/test_data.csv']],
+    # #                [['outputs/base_50_1/test_data.csv', 'outputs/base_50_2/test_data.csv'], ['outputs/base_100_1/test_data.csv', 'outputs/base_100_2/test_data.csv'],
+    # #                 ['outputs/base_250_1/test_data.csv', 'outputs/base_250_2/test_data.csv'], ['outputs/base_500_1/test_data.csv', 'outputs/base_500_2/test_data.csv']],
+    # #                'graphs/baselines_final',
+    # #               ['50 Training Levels', '100 Training Levels', '250 Training Levels', '500 Training Levels'],
+    # #               errorbars=True)
+    # # plot_multiple([['outputs/base_100_1_16env/train_data.csv', 'outputs/base_100_2_16env/train_data.csv', 'outputs/base_100_3_16env/train_data.csv'],
+    # #                ['outputs/shallow_100_1_16env/train_data.csv', 'outputs/shallow_100_2_16env/train_data.csv', 'outputs/shallow_100_3_16env/train_data.csv'],
+    # #                ['outputs/deep_100_1_16env/train_data.csv', 'outputs/deep_100_2_16env/train_data.csv', 'outputs/deep_100_3_16env/train_data.csv']],
+    # #               [['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv', 'outputs/base_100_3_16env/test_data.csv'],
+    # #                ['outputs/shallow_100_1_16env/test_data.csv', 'outputs/shallow_100_2_16env/test_data.csv', 'outputs/shallow_100_3_16env/test_data.csv'],
+    # #                ['outputs/deep_100_1_16env/test_data.csv', 'outputs/deep_100_2_16env/test_data.csv', 'outputs/deep_100_3_16env/test_data.csv']],
+    # #               'graphs/depth', ['Baseline', 'Shallow', 'Deep'], errorbars=True)
+    # # plot_two(['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv'],
+    # #          ['outputs/batchnorm_100_1_16env/test_data.csv', 'outputs/batchnorm_100_2_16env/test_data.csv',
+    # #          'outputs/batchnorm_100_3_16env/test_data.csv'],
+    # #          'graphs/batchnorm_2', labels=['Baseline', 'Batchnorm'], colors=['k', 'r'])
+    # # plot_multiple([['outputs/base_100_1_16env/train_data.csv', 'outputs/base_100_2_16env/train_data.csv', 'outputs/base_100_3_16env/train_data.csv'],
+    # #                ['outputs/batchnorm_100_1_16env/train_data.csv', 'outputs/batchnorm_100_2_16env/train_data.csv',
+    # #                 'outputs/batchnorm_100_3_16env/train_data.csv']],
+    # #               [['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv', 'outputs/base_100_3_16env/test_data.csv'],
+    # #                ['outputs/batchnorm_100_1_16env/test_data.csv', 'outputs/batchnorm_100_2_16env/test_data.csv',
+    # #                 'outputs/batchnorm_100_3_16env/test_data.csv']],
+    # #               'graphs/batchnorm_eb', ['Baseline', 'Batchnorm'], errorbars=True)
+    #
+    # plot_multiple([['outputs/base_50_1/test_data.csv', 'outputs/base_50_2/test_data.csv'],
+    #                ['outputs/base_100_1/test_data.csv', 'outputs/base_100_2/test_data.csv'],
+    #                ['outputs/base_250_1/test_data.csv', 'outputs/base_250_2/test_data.csv'],
+    #                ['outputs/base_500_1/test_data.csv', 'outputs/base_500_2/test_data.csv']],
+    #               [['outputs/base_50_1_16env/test_data.csv', 'outputs/base_50_2_16env/test_data.csv'],
+    #                ['outputs/base_100_1_16env/test_data.csv', 'outputs/base_100_2_16env/test_data.csv'],
+    #                ['outputs/base_250_1_16env/test_data.csv', 'outputs/base_250_2_16env/test_data.csv'],
+    #                ['outputs/base_500_1_16env/test_data.csv', 'outputs/base_500_2_16env/test_data.csv']],
+    #               'graphs/64v16', titles=['50 Training Levels', '100 Training Levels', '250 Training Levels', '500 Training Levels'],
+    #               labels=['64 Parallel Environments', '16 Parallel Environments'], colors=['k', 'r'], errorbars=True, suptitle='Test Set Performance')
