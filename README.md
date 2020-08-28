@@ -2,6 +2,8 @@
 
 Creating an agent to solve ProcGen tasks for CS 182 at Berkeley.
 
+See our report at https://albertwilcox.github.io/procgen-182/
+
 https://openai.com/blog/procgen-benchmark/
 
 ## To run our code:
